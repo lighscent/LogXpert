@@ -1,8 +1,12 @@
 {
-  "name": "powerlogs",
+  "name": "logxpert",
   "version": "0.1.0",
   "description": "A powerful logging library for Node.js",
   "main": "main.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lighscent/LogXpert.git"
+  },
   "author": "https://github.com/lighscent",
   "license": "MIT"
 }

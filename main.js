@@ -1,34 +1,84 @@
-const colors = {
-    reset: "\x1b[0m",
-    red: "\x1b[31m",
-    yellow: "\x1b[33m",
-    cyan: "\x1b[36m",
-    magenta: "\x1b[35m",
-    white: "\x1b[37m"
-};
+const { createLogger, format, transports } = require('winston');
+require('winston-daily-rotate-file');
 
-function colorText(text, color) {
-    return `${color}${text}${colors.reset}`;
+// Custom format for logger
+const customFormat = format.printf(({ timestamp, level, message }) => {
+    return `${timestamp} [${level}]: ${message}`;
+});
+
+// Create a logger with console transport only
+const logger = createLogger({
+    level: 'debug',
+    format: format.combine(
+        format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+        customFormat
+    ),
+    transports: [
+        new transports.Console({
+            format: format.combine(
+                format.colorize(),
+                format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+                customFormat
+            )
+        })
+    ]
+});
+
+// Reference to file transport (added via settings)
+let fileTransport;
+
+// Settings function to enable file logging
+// Example usage:
+// log.settings({ files: { folder: 'logs', filesName: 'YYYY-MM-DD_HH:mm:ss', maxFile: '14d', maxSize: '20m', zippedArchive: true }})
+function applySettings(options = {}) {
+    if (options.files) {
+        // Set defaults if not provided
+        const folder = options.files.folder || 'logs';
+        const datePattern = options.files.filesName || 'YYYY-MM-DD_HH:mm:ss';
+        const maxFiles = options.files.maxFile || '14d';
+        const maxSize = options.files.maxSize || '20m';
+        const zippedArchive = options.files.zippedArchive !== undefined ? options.files.zippedArchive : false;
+
+        // Remove existing file transport if it exists
+        if (fileTransport) {
+            logger.remove(fileTransport);
+        }
+
+        // Create a new daily rotate file transport with provided/default settings
+        fileTransport = new transports.DailyRotateFile({
+            filename: `${folder}/application-%DATE%.log`,
+            datePattern,
+            zippedArchive,
+            maxSize,
+            maxFiles
+        });
+
+        logger.add(fileTransport);
+    }
 }
 
+// Create a simplified logging interface
 function log(message) {
-    console.log(colorText(message, colors.white));
+    logger.info(message);
 }
 
 log.error = function (message) {
-    console.error(colorText(`Error: ${message}`, colors.red));
+    logger.error(message);
 };
 
 log.warn = function (message) {
-    console.warn(colorText(`Warn: ${message}`, colors.yellow));
+    logger.warn(message);
 };
 
 log.info = function (message) {
-    console.info(colorText(`Info: ${message}`, colors.cyan));
+    logger.info(message);
 };
 
 log.debug = function (message) {
-    console.debug(colorText(`Debug: ${message}`, colors.magenta));
+    logger.debug(message);
 };
+
+// Expose the settings function for configuring file logging
+log.settings = applySettings;
 
 module.exports = log;

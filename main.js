@@ -1,3 +1,4 @@
+const fs = require('fs');
 const { createLogger, format, transports } = require('winston');
 require('winston-daily-rotate-file');
 
@@ -29,7 +30,7 @@ let fileTransport;
 
 // Settings function to enable file logging
 // Example usage:
-// log.settings({ files: { folder: 'logs', filesName: 'YYYY-MM-DD_HH:mm:ss', maxFile: '14d', maxSize: '20m', zippedArchive: true }})
+// log.settings({ files: { folder: 'logs', filesName: 'YYYY-MM-DD_HH:mm:ss', maxFile: '14d', maxSize: '20m', zippedArchive: false }})
 function applySettings(options = {}) {
     if (options.files) {
         // Set defaults if not provided
@@ -38,6 +39,11 @@ function applySettings(options = {}) {
         const maxFiles = options.files.maxFile || '14d';
         const maxSize = options.files.maxSize || '20m';
         const zippedArchive = options.files.zippedArchive !== undefined ? options.files.zippedArchive : false;
+
+        // Ensure the log folder exists
+        if (!fs.existsSync(folder)) {
+            fs.mkdirSync(folder, { recursive: true });
+        }
 
         // Remove existing file transport if it exists
         if (fileTransport) {

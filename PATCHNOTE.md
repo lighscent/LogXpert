@@ -1,5 +1,9 @@
 # Patch Notes
 
+## v0.3.1
+
+- Ensure the log folder is created if it does not exist to prevent `ENOENT` errors.
+
 ## v0.3.0
 
 - Added file logging support using winston and winston-daily-rotate-file.

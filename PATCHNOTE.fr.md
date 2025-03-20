@@ -1,5 +1,9 @@
 # Notes de Version
 
+## v0.3.1
+
+- Ajout de la création automatique du dossier de logs s'il n'existe pas afin d'éviter l'erreur `ENOENT`.
+
 ## v0.3.0
 
 - Ajout du support de l'enregistrement dans des fichiers via [winston](https://github.com/winstonjs/winston) et [winston-daily-rotate-file](https://github.com/winstonjs/winston-daily-rotate-file).

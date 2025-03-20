@@ -1,0 +1,8 @@
+{
+  "name": "powerlogs",
+  "version": "0.1.0",
+  "description": "A powerful logging library for Node.js",
+  "main": "main.js",
+  "author": "https://github.com/lighscent",
+  "license": "MIT"
+}

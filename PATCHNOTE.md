@@ -1,5 +1,11 @@
 # Patch Notes
 
+## v1.0.2 
+
+- **Custom Timestamp Decoration Preservation:** Introduced a helper function in the logging module to allow any decoration characters (such as [], (), {}) in the `timestampFormat` to be preserved as supplied by the user. This improvement lets you use formats like `"This is the date: [YYYY-MM-DD HH:mm:ss] - "` or `"date: YYYY-MM-DD heure: HH:mm:ss - "` without Moment.js automatically escaping the brackets.
+- **Other Enhancements and Bug Fixes:** All previous improvements and features from v1.0.1 LTS remain intact.
+
+
 ## v1.0.1
 
 - Improved support for fully custom console timestamp formats using Moment.js. Users can now supply completely custom formats (e.g., "This is the time: [YYYY-MM-DD HH:mm:ss] - " or "date: YYYY-MM-DD heure: HH:mm:ss - ") that correctly render dynamic dates and literal text.
@@ -11,8 +17,6 @@
 - **File Logging Improvements:** Updated file logging settings and ensured the log folder is automatically created if it doesn't exist.
 - **Documentation:** Updated README and API references for clarity and completeness.
 - **Backward Compatibility:** Retained all features from previous versions, including methods for general, error, warning, info, and debug logging.
-
-## Previous Versions
 
 ### v0.3.2
 - Changed the default `filesName` pattern from `'YYYY-MM-DD_HH:mm:ss'` to `'YYYY-MM-DD'`.

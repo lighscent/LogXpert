@@ -1,5 +1,11 @@
 # Notes de Version
 
+## v1.0.3
+
+- **Correction de la désactivation de l'horodatage :** Correction du problème où, malgré `enableTimestamp: false`, l'horodatage était toujours affiché. L'horodatage est désormais complètement désactivé en console lorsque requis.
+- **Correction de l'horodatage personnalisé avec décoration :** Résolution des problèmes de formatage lors de l'utilisation de formats d'horodatage personnalisés avec des caractères décoratifs (par exemple, des crochets). Des formats comme `"Voici la date et l'heure: [YYYY-MM-DD HH:mm:ss] - "` s'affichent correctement.
+- Toutes les améliorations et fonctionnalités précédentes de la v1.0.2 LTS restent intactes.
+
 ## v1.0.2
 
 - **Préservation de la Décoration dans l'Horodatage Personnalisé :** Ajout d'une fonction d'assistance dans le module de log qui permet de conserver les caractères de décoration (tels que [], (), {}) dans le `timestampFormat` tel que défini par l'utilisateur. Cette amélioration permet d'utiliser des formats comme `"Voici la date et l'heure: [YYYY-MM-DD HH:mm:ss] - "` ou `"date: YYYY-MM-DD heure: HH:mm:ss - "` sans que Moment.js n'échappe automatiquement les crochets.

@@ -1,5 +1,11 @@
 # Patch Notes
 
+## v1.0.3
+
+- **Timestamp Disabling Fix:** Corrected the issue where setting `enableTimestamp: false` still printed a timestamp. Timestamps are now completely disabled in the console output when requested.
+- **Custom Timestamp Decoration Fix:** Resolved formatting glitches when using custom timestamp formats with decorative characters (e.g., square brackets) so that formats like `"This is the date: [YYYY-MM-DD HH:mm:ss] - "` render correctly.
+- All previous enhancements and features from v1.0.2 LTS remain intact.
+
 ## v1.0.2 
 
 - **Custom Timestamp Decoration Preservation:** Introduced a helper function in the logging module to allow any decoration characters (such as [], (), {}) in the `timestampFormat` to be preserved as supplied by the user. This improvement lets you use formats like `"This is the date: [YYYY-MM-DD HH:mm:ss] - "` or `"date: YYYY-MM-DD heure: HH:mm:ss - "` without Moment.js automatically escaping the brackets.

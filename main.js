@@ -4,24 +4,23 @@ const { createLogger, format, transports } = require('winston');
 require('winston-daily-rotate-file');
 
 /**
- * Helper function to format the timestamp while preserving bracket characters.
- * This function replaces all occurrences of '[' and ']' with temporary placeholders
- * so that Moment.js does not treat them as escapes. After formatting, it restores them.
+ * Helper function to format the timestamp while preserving square brackets.
+ * It replaces "[" with "%%LB%%" and "]" with "%%RB%%" to prevent Moment.js from
+ * treating the contents as literal text. After formatting, the placeholders are restored.
  *
  * @param {string} fmt - The user-defined format string.
- * @returns {string} - The formatted timestamp with any decoration brackets preserved.
+ * @returns {string} - The formatted timestamp with square brackets preserved.
  *
  * Example:
- *   Input: "Voici la date et l'heure: [YYYY-MM-DD HH:mm:ss] - "
- *   Might output: "Voici la date et l'heure: [2025-03-21 15:30:45] - "
+ *   Input: "This is the date: [YYYY-MM-DD HH:mm:ss] - "
+ *   Might output: "This is the date: [2025-03-21 15:30:45] - "
  */
 function formatCustomTimestamp(fmt) {
-    // Replace square brackets with placeholders
-    const temp = fmt.replace(/\[/g, '__LB__').replace(/\]/g, '__RB__');
-    // Let moment replace tokens in the modified string
+    // Use a placeholder that's unlikely to be parsed by moment
+    const temp = fmt.replace(/\[/g, '%%LB%%').replace(/\]/g, '%%RB%%');
     const formatted = moment().format(temp);
-    // Restore the original bracket characters
-    return formatted.replace(/__LB__/g, '[').replace(/__RB__/g, ']');
+    // Restore the original square brackets
+    return formatted.replace(/%%LB%%/g, '[').replace(/%%RB%%/g, ']');
 }
 
 /**
@@ -30,7 +29,7 @@ function formatCustomTimestamp(fmt) {
  * @property {string} [timestampFormat='YYYY-MM-DD HH:mm:ss'] - Custom format for the timestamp.
  *   You can include any decoration characters ([], (), {}) without interference.
  *   For example:
- *     - "Voici la date et l'heure: [YYYY-MM-DD HH:mm:ss] - "
+ *     - "This is the date: [YYYY-MM-DD HH:mm:ss] - "
  *     - "date: YYYY-MM-DD heure: HH:mm:ss - "
  */
 
@@ -57,28 +56,24 @@ const customFormat = format.printf(({ timestamp, level, message }) => {
 // Default console timestamp format
 const defaultConsoleFormat = 'YYYY-MM-DD HH:mm:ss';
 
-// Create a default console transport with timestamp enabled using the default format
-let consoleTransport = new transports.Console({
+// Create the global logger. Its default format will be overridden by the console transport settings.
+const logger = createLogger({
+    level: 'debug',
     format: format.combine(
-        format.colorize(),
-        format.timestamp({
-            format: () => moment().format(defaultConsoleFormat)
-        }),
+        format.timestamp({ format: () => moment().format(defaultConsoleFormat) }),
         customFormat
     )
 });
 
-// Create a logger with the default console transport
-const logger = createLogger({
-    level: 'debug',
+// Create default console transport (will be replaced via settings)
+let consoleTransport = new transports.Console({
     format: format.combine(
-        format.timestamp({
-            format: () => moment().format(defaultConsoleFormat)
-        }),
+        format.colorize(),
+        format.timestamp({ format: () => moment().format(defaultConsoleFormat) }),
         customFormat
-    ),
-    transports: [consoleTransport]
+    )
 });
+logger.add(consoleTransport);
 
 // Reference to file transport (added via settings)
 let fileTransport;
@@ -88,13 +83,12 @@ let fileTransport;
  *
  * @param {LogSettingsOptions} options - The settings for both console and file logging.
  * @example
- * // Example: Fully custom console timestamp that preserves decoration,
+ * // Example: Fully custom console timestamp that preserves decorational brackets,
  * // and enabling file logging.
  * log.settings({ 
  *   console: { 
  *     enableTimestamp: true,
- *     // You can now include brackets or parentheses as decoration:
- *     timestampFormat: "Voici la date et l'heure: [YYYY-MM-DD HH:mm:ss] - "
+ *     timestampFormat: "This is the date: [YYYY-MM-DD HH:mm:ss] - "
  *   },
  *   files: { 
  *     folder: 'logs', 
@@ -106,7 +100,6 @@ let fileTransport;
  * });
  */
 function applySettings(options = {}) {
-    // Update console transport if configuration is provided
     if (options.console) {
         const enableTimestamp = options.console.enableTimestamp !== undefined ? options.console.enableTimestamp : true;
         const timestampFormat = options.console.timestampFormat || defaultConsoleFormat;
@@ -114,26 +107,25 @@ function applySettings(options = {}) {
         // Remove the current console transport
         logger.remove(consoleTransport);
 
-        // Create new console transport based on the provided options.
-        // Here, we use our helper function to let tokens be replaced while preserving any decoration.
+        // Build the console format based on the enableTimestamp flag.
+        const consoleFormat = enableTimestamp
+            ? format.combine(
+                format.colorize(),
+                format.timestamp({ format: () => formatCustomTimestamp(timestampFormat) }),
+                customFormat
+            )
+            : format.combine(
+                format((info) => { delete info.timestamp; return info; })(),
+                format.colorize(),
+                customFormat
+            );
+
         consoleTransport = new transports.Console({
-            format: enableTimestamp
-                ? format.combine(
-                    format.colorize(),
-                    format.timestamp({
-                        format: () => formatCustomTimestamp(timestampFormat)
-                    }),
-                    customFormat
-                )
-                : format.combine(
-                    format.colorize(),
-                    customFormat
-                )
+            format: consoleFormat
         });
         logger.add(consoleTransport);
     }
 
-    // Enable file logging if options.files is provided
     if (options.files) {
         const folder = options.files.folder || 'logs';
         const datePattern = options.files.filesName || 'YYYY-MM-DD';
@@ -141,17 +133,14 @@ function applySettings(options = {}) {
         const maxSize = options.files.maxSize || '20m';
         const zippedArchive = options.files.zippedArchive !== undefined ? options.files.zippedArchive : false;
 
-        // Ensure the log folder exists
         if (!fs.existsSync(folder)) {
             fs.mkdirSync(folder, { recursive: true });
         }
 
-        // Remove existing file transport if it exists
         if (fileTransport) {
             logger.remove(fileTransport);
         }
 
-        // Create a new daily-rotate file transport with provided/default settings
         fileTransport = new transports.DailyRotateFile({
             filename: `${folder}/application-%DATE%.log`,
             datePattern,
@@ -172,39 +161,23 @@ function log(message) {
     logger.info(message);
 }
 
-/**
- * Logs an error message.
- * @param {string} message - The error message.
- */
 log.error = function (message) {
     logger.error(message);
 };
 
-/**
- * Logs a warning message.
- * @param {string} message - The warning message.
- */
 log.warn = function (message) {
     logger.warn(message);
 };
 
-/**
- * Logs an informational message.
- * @param {string} message - The informational message.
- */
 log.info = function (message) {
     logger.info(message);
 };
 
-/**
- * Logs a debug message.
- * @param {string} message - The debug message.
- */
 log.debug = function (message) {
     logger.debug(message);
 };
 
-// Expose the settings function for configuring both file logging and console output
+// Expose the settings function for configuring both file logging and console output.
 log.settings = applySettings;
 
 module.exports = log;

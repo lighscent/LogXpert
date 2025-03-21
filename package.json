@@ -1,6 +1,6 @@
 {
   "name": "logxpert",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A powerful logging library for Node.js",
   "main": "main.js",
   "repository": {
@@ -10,6 +10,7 @@
   "author": "https://github.com/lighscent",
   "license": "MIT",
   "dependencies": {
+    "moment": "^2.30.1",
     "winston": "^3.17.0",
     "winston-daily-rotate-file": "^5.0.0"
   }

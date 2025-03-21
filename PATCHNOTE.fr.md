@@ -1,6 +1,10 @@
 # Notes de Version
 
-## v1.0.0 LTS
+## v1.0.1
+
+- Amélioration de la prise en charge des formats d'horodatage personnalisés en console via Moment.js. Les utilisateurs peuvent désormais fournir des formats entièrement personnalisés (ex. : "Voici la date et l'heure: [YYYY-MM-DD HH:mm:ss] - " ou "date: YYYY-MM-DD heure: HH:mm:ss - ") qui rendent correctement les dates dynamiques et le texte littéral.
+
+## v1.0.0
 
 - **Stabilité & Support:** Cette version est désormais la version LTS, offrant une API stable pour une utilisation en production sur le long terme.
 - **Configuration Améliorée:** Ajout d'options avancées pour personnaliser l'horodatage en console, incluant le format, le préfixe et le suffixe personnalisables.

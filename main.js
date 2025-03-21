@@ -1,13 +1,15 @@
 const fs = require('fs');
+const moment = require('moment'); // Add moment as a dependency: npm install moment
 const { createLogger, format, transports } = require('winston');
 require('winston-daily-rotate-file');
 
 /**
  * @typedef {Object} ConsoleOptions
  * @property {boolean} [enableTimestamp=true] - Enable or disable timestamp in console logs.
- * @property {string} [timestampFormat='YYYY-MM-DD HH:mm:ss'] - Format for the timestamp.
- * @property {string} [timestampPrefix=''] - String to prefix the timestamp.
- * @property {string} [timestampSuffix=''] - String to suffix the timestamp.
+ * @property {string} [timestampFormat='YYYY-MM-DD HH:mm:ss'] - Moment.js format for the timestamp.
+ *   You can include literal text as needed. For example:
+ *     - "Voici la date et l'heure: [YYYY-MM-DD HH:mm:ss] - "
+ *     - "date: YYYY-MM-DD heure: HH:mm:ss - "
  */
 
 /**
@@ -25,16 +27,21 @@ require('winston-daily-rotate-file');
  * @property {FilesOptions} [files] - Options for configuring file logging.
  */
 
-// Custom format for logger (handles the timestamp if present)
+// Custom format for logger output
 const customFormat = format.printf(({ timestamp, level, message }) => {
     return timestamp ? `${timestamp} [${level}]: ${message}` : `[${level}]: ${message}`;
 });
 
-// Create a default console transport with timestamp enabled by default
+// Default console timestamp format
+const defaultConsoleFormat = 'YYYY-MM-DD HH:mm:ss';
+
+// Create a default console transport with timestamp enabled using Moment.js
 let consoleTransport = new transports.Console({
     format: format.combine(
         format.colorize(),
-        format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+        format.timestamp({
+            format: () => moment().format(defaultConsoleFormat)
+        }),
         customFormat
     )
 });
@@ -43,7 +50,9 @@ let consoleTransport = new transports.Console({
 const logger = createLogger({
     level: 'debug',
     format: format.combine(
-        format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+        format.timestamp({
+            format: () => moment().format(defaultConsoleFormat)
+        }),
         customFormat
     ),
     transports: [consoleTransport]
@@ -54,16 +63,15 @@ let fileTransport;
 
 /**
  * Configures logging settings for both console and file transports.
- * 
- * @param {LogSettingsOptions} options - The settings for console and file logging.
+ *
+ * @param {LogSettingsOptions} options - The settings for both console and file logging.
  * @example
- * // Customize console timestamp and enable file logging
+ * // Example: Fully custom console timestamp using a custom format string,
+ * // and enabling file logging.
  * log.settings({ 
  *   console: { 
  *     enableTimestamp: true,
- *     timestampFormat: 'YYYY-MM-DD HH:mm:ss',
- *     timestampPrefix: '[START] ',
- *     timestampSuffix: ' [END]'
+ *     timestampFormat: "Voici la date et l'heure: [YYYY-MM-DD HH:mm:ss] - "
  *   },
  *   files: { 
  *     folder: 'logs', 
@@ -78,26 +86,20 @@ function applySettings(options = {}) {
     // Update console transport if configuration is provided
     if (options.console) {
         const enableTimestamp = options.console.enableTimestamp !== undefined ? options.console.enableTimestamp : true;
-        const timestampFormat = options.console.timestampFormat || 'YYYY-MM-DD HH:mm:ss';
-        const timestampPrefix = options.console.timestampPrefix || '';
-        const timestampSuffix = options.console.timestampSuffix || '';
+        const timestampFormat = options.console.timestampFormat || defaultConsoleFormat;
 
         // Remove the current console transport
         logger.remove(consoleTransport);
 
-        // Create new console transport based on the provided options
+        // Create new console transport based on the provided options.
+        // The provided timestampFormat is passed directly to moment().
         consoleTransport = new transports.Console({
             format: enableTimestamp
                 ? format.combine(
                     format.colorize(),
-                    format.timestamp({ format: timestampFormat }),
-                    // Append prefix and suffix to the timestamp value
-                    format((info) => {
-                        if (info.timestamp) {
-                            info.timestamp = timestampPrefix + info.timestamp + timestampSuffix;
-                        }
-                        return info;
-                    })(),
+                    format.timestamp({
+                        format: () => moment().format(timestampFormat)
+                    }),
                     customFormat
                 )
                 : format.combine(
@@ -126,7 +128,7 @@ function applySettings(options = {}) {
             logger.remove(fileTransport);
         }
 
-        // Create a new daily rotate file transport with provided/default settings
+        // Create a new daily-rotate file transport with provided/default settings
         fileTransport = new transports.DailyRotateFile({
             filename: `${folder}/application-%DATE%.log`,
             datePattern,
@@ -141,8 +143,8 @@ function applySettings(options = {}) {
 
 /**
  * Logs a general message using the info level.
- * 
- * @param {string} message - Message to be logged.
+ *
+ * @param {string} message - The message to be logged.
  */
 function log(message) {
     logger.info(message);
@@ -150,7 +152,7 @@ function log(message) {
 
 /**
  * Logs an error message.
- * @param {string} message - Error message.
+ * @param {string} message - The error message.
  */
 log.error = function (message) {
     logger.error(message);
@@ -158,7 +160,7 @@ log.error = function (message) {
 
 /**
  * Logs a warning message.
- * @param {string} message - Warning message.
+ * @param {string} message - The warning message.
  */
 log.warn = function (message) {
     logger.warn(message);
@@ -166,7 +168,7 @@ log.warn = function (message) {
 
 /**
  * Logs an informational message.
- * @param {string} message - Informational message.
+ * @param {string} message - The informational message.
  */
 log.info = function (message) {
     logger.info(message);
@@ -174,13 +176,13 @@ log.info = function (message) {
 
 /**
  * Logs a debug message.
- * @param {string} message - Debug message.
+ * @param {string} message - The debug message.
  */
 log.debug = function (message) {
     logger.debug(message);
 };
 
-// Expose the settings function for configuring file logging and console output customization
+// Expose the settings function for configuring both file logging and console output
 log.settings = applySettings;
 
 module.exports = log;

@@ -1,6 +1,6 @@
-# LogXpert v1.0.0 LTS
+# LogXpert v1.0.1 LTS
 
-LogXpert est une bibliothèque de logs puissante pour Node.js qui offre des méthodes de log simples à utiliser avec une sortie colorée et, en option, l'enregistrement dans un fichier. Cette version est la version LTS (Long Term Support) avec une API stable et des options de configuration améliorées.
+LogXpert est une bibliothèque de logs puissante pour Node.js qui offre des méthodes de log simples à utiliser avec une sortie colorée et, en option, l'enregistrement dans un fichier. Dans cette version LTS v1.0.1, nous avons amélioré la personnalisation de l'horodatage en console et apporté plusieurs améliorations.
 
 ## Table des Matières
 - [Installation](#installation)
@@ -46,7 +46,7 @@ log.debug("Ceci est un message de debug.");
 
 ### Journalisation avancée : Fichiers de logs & Personnalisation de l'horodatage en console
 
-LogXpert supporte la journalisation dans des fichiers via [winston](https://github.com/winstonjs/winston) et [winston-daily-rotate-file](https://github.com/winstonjs/winston-daily-rotate-file). Vous pouvez configurer l'enregistrement dans un fichier ainsi que personnaliser l'horodatage en console grâce à `log.settings()`.
+LogXpert supporte la journalisation dans des fichiers via [winston](https://github.com/winstonjs/winston) et [winston-daily-rotate-file](https://github.com/winstonjs/winston-daily-rotate-file). Vous pouvez configurer l'enregistrement dans un fichier ainsi que personnaliser pleinement l'horodatage en console grâce à `log.settings()`.
 
 Exemple de configuration :
 
@@ -56,9 +56,12 @@ const log = require('logxpert');
 log.settings({ 
     console: { 
         enableTimestamp: true,
-        timestampFormat: 'YYYY-MM-DD HH:mm:ss',
-        timestampPrefix: '[START] ',
-        timestampSuffix: ' [END]'
+        // Exemple 1 : Inclure du texte littéral avec des tokens
+        timestampFormat: "Voici la date et l'heure: [YYYY-MM-DD HH:mm:ss] - ",
+        // Exemple 2 : Séparer les tokens pour la date et l'heure
+        // timestampFormat: "date: YYYY-MM-DD heure: HH:mm:ss - "
+        timestampPrefix: '',
+        timestampSuffix: ''
     },
     files: { 
         folder: 'logs', 
@@ -89,13 +92,13 @@ log.settings({
 
 - **log.settings(options: object):**  
   Configure les options d'enregistrement dans un fichier et de personnalisation de la sortie console.  
-  **Options Console:**
+  **Options Console :**
   - `enableTimestamp` (boolean) : Active/désactive l'horodatage (par défaut : `true`).
-  - `timestampFormat` (string) : Format de l'horodatage (par défaut : `'YYYY-MM-DD HH:mm:ss'`).
+  - `timestampFormat` (string) : Format de l'horodatage (par défaut : `'YYYY-MM-DD HH:mm:ss'`). Vous pouvez inclure du texte littéral si nécessaire.
   - `timestampPrefix` (string) : Préfixe de l'horodatage.
   - `timestampSuffix` (string) : Suffixe de l'horodatage.
   
-  **Options Fichiers:**
+  **Options Fichiers :**
   - `folder` (string) : Répertoire où les fichiers de logs seront stockés (par défaut : `'logs'`).
   - `filesName` (string) : Motif de date pour le nom des fichiers de logs (par défaut : `'YYYY-MM-DD'`).
   - `maxFile` (string) : Durée maximale de rétention des fichiers (par défaut : `'14d'`).

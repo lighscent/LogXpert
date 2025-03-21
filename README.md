@@ -1,12 +1,12 @@
-# LogXpert
+# LogXpert v1.0.0 LTS
 
-LogXpert is a powerful logging library for Node.js that provides easy-to-use logging methods with colorful formatted output and optional file logging support. This documentation explains the installation and usage of the module.
+LogXpert is a powerful logging library for Node.js that provides easy-to-use logging methods with colorful formatted output and optional file logging support. This release marks our Long Term Support (LTS) version with a stable API and enhanced configuration options.
 
 ## Table of Contents
 - [Installation](#installation)
 - [Usage](#usage)
   - [Basic Logging](#basic-logging)
-  - [Advanced Logging: File Output](#advanced-logging-file-output)
+  - [Advanced Logging: File Output & Custom Console Timestamp](#advanced-logging-file-output--custom-console-timestamp)
 - [API Reference](#api-reference)
 - [Additional Information](#additional-information)
 - [License](#license)
@@ -44,16 +44,22 @@ log.info('This is an informational message.');
 log.debug('This is a debug message.');
 ```
 
-### Advanced Logging: File Output
+### Advanced Logging: File Output & Custom Console Timestamp
 
-LogXpert supports file logging using [winston](https://github.com/winstonjs/winston) and [winston-daily-rotate-file](https://github.com/winstonjs/winston-daily-rotate-file). To enable file logging, you can configure it with custom settings via the `log.settings()` method. If not configured, only console logging is active.
+LogXpert supports file logging using [winston](https://github.com/winstonjs/winston) and [winston-daily-rotate-file](https://github.com/winstonjs/winston-daily-rotate-file). You can configure file logging and customize console timestamps via `log.settings()`.
 
-Example configuration to enable file logging:
+Example configuration to enable file logging and customize console timestamp:
 
 ```js
 const log = require('logxpert');
 
 log.settings({ 
+    console: { 
+        enableTimestamp: true,
+        timestampFormat: 'YYYY-MM-DD HH:mm:ss',
+        timestampPrefix: '[START] ',
+        timestampSuffix: ' [END]'
+    },
     files: { 
         folder: 'logs', 
         filesName: 'YYYY-MM-DD', 
@@ -64,7 +70,7 @@ log.settings({
 });
 ```
 
-### API Reference
+## API Reference
 
 - **log(message: string):**  
   Logs a general message using the `info` level.
@@ -81,15 +87,20 @@ log.settings({
 - **log.debug(message: string):**  
   Logs a debug message.
 
-- **log.settings(options: Object):**  
-  Configures the file logging options. Accepts an object with a `files` property.  
-  **Options**:
+- **log.settings(options: object):**  
+  Configures file logging and console output options.  
+  **Console Options:**
+  - `enableTimestamp` (boolean): Enable/disable timestamp (default: `true`).
+  - `timestampFormat` (string): Format for the timestamp (default: `'YYYY-MM-DD HH:mm:ss'`).
+  - `timestampPrefix` (string): Prefix for the timestamp.
+  - `timestampSuffix` (string): Suffix for the timestamp.
   
+  **Files Options:**
   - `folder` (string): Directory where log files will be stored (default: `'logs'`).
-  - `filesName` (string): Date pattern used in the log file name (default: `'YYYY-MM-DD_HH:mm:ss'`).
+  - `filesName` (string): Date pattern for the log file name (default: `'YYYY-MM-DD'`).
   - `maxFile` (string): Maximum file retention (default: `'14d'`).
   - `maxSize` (string): Maximum size per log file (default: `'20m'`).
-  - `zippedArchive` (boolean): Whether to archive the logs in zipped format (default: `false`).
+  - `zippedArchive` (boolean): Archive logs in zip format (default: `false`).
 
 ## Additional Information
 

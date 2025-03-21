@@ -1,12 +1,12 @@
-# LogXpert
+# LogXpert v1.0.0 LTS
 
-LogXpert est une bibliothèque de logs puissante pour Node.js qui offre des méthodes de log simples à utiliser avec une sortie colorée et, en option, l'enregistrement dans un fichier. Cette documentation explique l'installation et l'utilisation du module.
+LogXpert est une bibliothèque de logs puissante pour Node.js qui offre des méthodes de log simples à utiliser avec une sortie colorée et, en option, l'enregistrement dans un fichier. Cette version est la version LTS (Long Term Support) avec une API stable et des options de configuration améliorées.
 
 ## Table des Matières
 - [Installation](#installation)
 - [Utilisation](#utilisation)
   - [Journalisation de base](#journalisation-de-base)
-  - [Journalisation avancée : Fichiers de logs](#journalisation-avancee-fichiers-de-logs)
+  - [Journalisation avancée : Fichiers de logs & Personnalisation de l'horodatage en console](#journalisation-avancee-fichiers-de-logs--personnalisation-de-lhorodatage-en-console)
 - [Référence API](#référence-api)
 - [Informations Supplémentaires](#informations-supplémentaires)
 - [Licence](#licence)
@@ -44,22 +44,28 @@ log.info("Ceci est un message d'information.");
 log.debug("Ceci est un message de debug.");
 ```
 
-### Journalisation avancée : Fichiers de logs
+### Journalisation avancée : Fichiers de logs & Personnalisation de l'horodatage en console
 
-LogXpert supporte l'enregistrement des logs dans des fichiers à l'aide de [winston](https://github.com/winstonjs/winston) et [winston-daily-rotate-file](https://github.com/winstonjs/winston-daily-rotate-file). Pour activer l'enregistrement dans un fichier, configurez les paramètres via la méthode `log.settings()`. Si non configuré, seule la journalisation dans la console est active.
+LogXpert supporte la journalisation dans des fichiers via [winston](https://github.com/winstonjs/winston) et [winston-daily-rotate-file](https://github.com/winstonjs/winston-daily-rotate-file). Vous pouvez configurer l'enregistrement dans un fichier ainsi que personnaliser l'horodatage en console grâce à `log.settings()`.
 
-Exemple de configuration pour activer l'enregistrement dans un fichier :
+Exemple de configuration :
 
 ```js
 const log = require('logxpert');
 
 log.settings({ 
+    console: { 
+        enableTimestamp: true,
+        timestampFormat: 'YYYY-MM-DD HH:mm:ss',
+        timestampPrefix: '[START] ',
+        timestampSuffix: ' [END]'
+    },
     files: { 
         folder: 'logs', 
         filesName: 'YYYY-MM-DD', 
         maxFile: '14d', 
         maxSize: '20m', 
-        zippedArchive: false 
+        zippedArchive: false
     }
 });
 ```
@@ -81,12 +87,18 @@ log.settings({
 - **log.debug(message: string):**  
   Enregistre un message de debug.
 
-- **log.settings(options: Object):**  
-  Configure les options d'enregistrement des logs dans un fichier. L'objet doit contenir la propriété `files` avec les options suivantes :
-
+- **log.settings(options: object):**  
+  Configure les options d'enregistrement dans un fichier et de personnalisation de la sortie console.  
+  **Options Console:**
+  - `enableTimestamp` (boolean) : Active/désactive l'horodatage (par défaut : `true`).
+  - `timestampFormat` (string) : Format de l'horodatage (par défaut : `'YYYY-MM-DD HH:mm:ss'`).
+  - `timestampPrefix` (string) : Préfixe de l'horodatage.
+  - `timestampSuffix` (string) : Suffixe de l'horodatage.
+  
+  **Options Fichiers:**
   - `folder` (string) : Répertoire où les fichiers de logs seront stockés (par défaut : `'logs'`).
-  - `filesName` (string) : Motif de date utilisé dans le nom des fichiers de log (par défaut : `'YYYY-MM-DD_HH:mm:ss'`).
-  - `maxFile` (string) : Durée de rétention maximale des fichiers (par défaut : `'14d'`).
+  - `filesName` (string) : Motif de date pour le nom des fichiers de logs (par défaut : `'YYYY-MM-DD'`).
+  - `maxFile` (string) : Durée maximale de rétention des fichiers (par défaut : `'14d'`).
   - `maxSize` (string) : Taille maximale par fichier de log (par défaut : `'20m'`).
   - `zippedArchive` (boolean) : Archive les logs au format zip (par défaut : `false`).
 

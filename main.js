@@ -16,12 +16,14 @@ require('winston-daily-rotate-file');
  *   Might output: "This is the date: [2025-03-21 15:30:45] - "
  */
 function formatCustomTimestamp(fmt) {
-    // Use a placeholder that's unlikely to be parsed by moment
+    // Replace square brackets with temporary placeholders that won't interfere with Moment.js formatting
     const temp = fmt.replace(/\[/g, '%%LB%%').replace(/\]/g, '%%RB%%');
+    // Format the timestamp using Moment.js
     const formatted = moment().format(temp);
-    // Restore the original square brackets
+    // Replace the placeholders back with the square brackets
     return formatted.replace(/%%LB%%/g, '[').replace(/%%RB%%/g, ']');
 }
+
 
 /**
  * @typedef {Object} ConsoleOptions

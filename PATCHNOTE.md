@@ -1,5 +1,9 @@
 # Patch Notes
 
+## v0.3.2
+
+- Changed the default `filesName` pattern from `'YYYY-MM-DD_HH:mm:ss'` to `'YYYY-MM-DD'` so that log filenames do not include hours, minutes, or seconds.
+
 ## v0.3.1
 
 - Ensure the log folder is created if it does not exist to prevent `ENOENT` errors.

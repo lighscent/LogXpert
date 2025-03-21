@@ -56,10 +56,10 @@ const log = require('logxpert');
 log.settings({ 
     files: { 
         folder: 'logs', 
-        filesName: 'YYYY-MM-DD_HH:mm:ss', 
+        filesName: 'YYYY-MM-DD', 
         maxFile: '14d', 
         maxSize: '20m', 
-        zippedArchive: true 
+        zippedArchive: false 
     }
 });
 ```

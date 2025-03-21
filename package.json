@@ -1,6 +1,6 @@
 {
   "name": "logxpert",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "A powerful logging library for Node.js",
   "main": "main.js",
   "repository": {

@@ -30,12 +30,12 @@ let fileTransport;
 
 // Settings function to enable file logging
 // Example usage:
-// log.settings({ files: { folder: 'logs', filesName: 'YYYY-MM-DD_HH:mm:ss', maxFile: '14d', maxSize: '20m', zippedArchive: false }})
+// log.settings({ files: { folder: 'logs', filesName: 'YYYY-MM-DD', maxFile: '14d', maxSize: '20m', zippedArchive: false }})
 function applySettings(options = {}) {
     if (options.files) {
         // Set defaults if not provided
         const folder = options.files.folder || 'logs';
-        const datePattern = options.files.filesName || 'YYYY-MM-DD_HH:mm:ss';
+        const datePattern = options.files.filesName || 'YYYY-MM-DD';
         const maxFiles = options.files.maxFile || '14d';
         const maxSize = options.files.maxSize || '20m';
         const zippedArchive = options.files.zippedArchive !== undefined ? options.files.zippedArchive : false;

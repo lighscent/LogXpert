@@ -1,17 +1,14 @@
 {
   "name": "logxpert",
-  "version": "1.0.4-0",
+  "version": "1.0.5",
   "description": "A powerful logging library for Node.js",
   "main": "main.js",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/lighscent/LogXpert.git"
-  },
+  "repository": "git+https://github.com/lighscent/LogXpert.git",
   "author": "https://github.com/lighscent",
   "license": "MIT",
   "dependencies": {
     "moment": "^2.30.1",
-    "winston": "^3.17.0",
+    "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0"
   }
 }

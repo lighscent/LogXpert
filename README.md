@@ -103,11 +103,6 @@ log.settings({
   - `maxSize` (string): Maximum size per log file (default: `'20m'`).
   - `zippedArchive` (boolean): Archive logs in zip format (default: `false`).
 
-## Additional Information
-
-- [French Version](./README.fr.md)
-- [Patch Notes](./PATCHNOTE.md)
-
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under GNU General Public License v3.0. See the [LICENSE](LICENSE) file for details.

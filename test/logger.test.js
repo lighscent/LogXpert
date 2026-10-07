@@ -6,6 +6,21 @@ const path = require('node:path');
 
 const log = require('../main.js');
 
+async function waitForLog(dir, expected, timeout = 3000) {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    const files = fs.readdirSync(dir).filter((f) => f.endsWith('.log'));
+    for (const f of files) {
+      try {
+        const content = fs.readFileSync(path.join(dir, f), 'utf8');
+        if (content.includes(expected)) return f;
+      } catch {}
+    }
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  throw new Error(`timeout waiting for "${expected}" in ${dir}`);
+}
+
 describe('logxpert v2', () => {
   beforeEach(() => log.setLevel('debug'));
   afterEach(() => log.close());
@@ -44,16 +59,34 @@ describe('logxpert v2', () => {
     b.close();
   });
 
+  it('defaults filename prefix to package.json name', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'logxpert-'));
+    const inst = log.createLogger();
+    inst.settings({ files: { folder: dir } });
+    inst.info('prefix-test-message');
+    const file = await waitForLog(dir, 'prefix-test-message');
+    assert.ok(file.startsWith('logxpert-'), `expected logxpert- prefix, got ${file}`);
+    inst.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('files.appName overrides the filename prefix', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'logxpert-'));
+    const inst = log.createLogger();
+    inst.settings({ files: { folder: dir, appName: '@myorg/my-app!' } });
+    inst.info('appname-test-message');
+    const file = await waitForLog(dir, 'appname-test-message');
+    assert.ok(file.startsWith('my-app-'), `expected my-app- prefix, got ${file}`);
+    inst.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
   it('writes rotated file with custom filename', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'logxpert-'));
     const inst = log.createLogger();
     inst.settings({ files: { folder: dir, filename: 'app-%DATE%.log', datePattern: 'YYYY-MM-DD', maxSize: '20m', maxFile: '14d' } });
     inst.info('file-test-message');
-    await new Promise((r) => setTimeout(r, 800));
-    const files = fs.readdirSync(dir).filter((f) => f.endsWith('.log'));
-    assert.ok(files.length > 0, 'expected a .log file');
-    const content = fs.readFileSync(path.join(dir, files[0]), 'utf8');
-    assert.ok(content.includes('file-test-message'));
+    await waitForLog(dir, 'file-test-message');
     inst.close();
     fs.rmSync(dir, { recursive: true, force: true });
   });

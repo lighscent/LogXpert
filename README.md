@@ -63,7 +63,11 @@ log.settings({
   },
   files: {
     folder: 'logs',
-    filename: 'application-%DATE%.log',
+    // Default when omitted: `<package.json name>-%DATE%.log`
+    // (e.g. logxpert-2026-10-07.log), fallback to application-%DATE%.log.
+    // Explicit filename always wins; appName overrides the auto prefix.
+    filename: 'logxpert-%DATE%.log',
+    appName: 'my-service',
     filesName: 'YYYY-MM-DD',
     maxFile: '14d',
     maxSize: '20m',
@@ -90,7 +94,7 @@ log.close();
 - **log.close():** remove file transport.
 
 Console options: `enableTimestamp`, `timestampFormat`, `timestampPrefix`, `timestampSuffix`, `colorize`, `level`.
-Files options: `folder`, `filename`, `filesName`/`datePattern`, `maxFile`/`maxFiles`, `maxSize`, `zippedArchive`, `level`.
+Files options: `folder`, `filename`, `appName`, `filesName`/`datePattern`, `maxFile`/`maxFiles`, `maxSize`, `zippedArchive`, `level`.
 
 ## License
 

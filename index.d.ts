@@ -14,6 +14,7 @@ export interface FilesOptions {
   filesName?: string;
   datePattern?: string;
   filename?: string;
+  appName?: string;
   maxFile?: string;
   maxFiles?: string;
   maxSize?: string;

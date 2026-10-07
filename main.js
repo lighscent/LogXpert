@@ -44,6 +44,26 @@ function assertLevel(level) {
   if (!VALID_LEVELS.includes(level)) throw new Error(`Invalid log level "${level}". Use one of: ${VALID_LEVELS.join(', ')}`);
 }
 
+function sanitizeAppName(name) {
+  if (typeof name !== 'string' || !name.trim()) return null;
+  const base = name.trim().split('/').pop();
+  const safe = base.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^[-_.]+|[-_.]+$/g, '');
+  return safe || null;
+}
+
+let cachedAppName = null;
+function getDefaultAppName() {
+  if (cachedAppName) return cachedAppName;
+  try {
+    const pkgPath = path.resolve(process.cwd(), 'package.json');
+    const raw = fs.readFileSync(pkgPath, 'utf8');
+    cachedAppName = sanitizeAppName(JSON.parse(raw)?.name) ?? 'application';
+  } catch {
+    cachedAppName = 'application';
+  }
+  return cachedAppName;
+}
+
 function normalizeFilesOptions(files = {}) {
   const folder = files.folder ?? 'logs';
   if (typeof folder !== 'string' || !folder.trim() || folder.includes('\0')) {
@@ -53,7 +73,7 @@ function normalizeFilesOptions(files = {}) {
   if (typeof datePattern !== 'string' || !datePattern.trim()) {
     throw new Error('files.filesName/datePattern must be a non-empty string');
   }
-  let filename = files.filename ?? `application-%DATE%.log`;
+  let filename = files.filename ?? `${sanitizeAppName(files.appName) ?? getDefaultAppName()}-%DATE%.log`;
   if (typeof filename !== 'string' || !filename.trim()) {
     throw new Error('files.filename must be a non-empty string');
   }

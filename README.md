@@ -1,19 +1,8 @@
 # LogXpert
 
-LogXpert is a powerful logging library for Node.js that provides easy-to-use logging methods with colorful formatted output and optional file logging support
-
-## Table of Contents
-- [Installation](#installation)
-- [Usage](#usage)
-  - [Basic Logging](#basic-logging)
-  - [Advanced Logging: File Output & Custom Console Timestamp](#advanced-logging-file-output--custom-console-timestamp)
-- [API Reference](#api-reference)
-- [Additional Information](#additional-information)
-- [License](#license)
+LogXpert is a powerful logging library for Node.js that provides easy-to-use logging methods with colorful formatted output and optional file logging support.
 
 ## Installation
-
-You can install LogXpert using npm:
 
 ```sh
 npm install logxpert
@@ -21,88 +10,88 @@ npm install logxpert
 
 ## Usage
 
-### Basic Logging
-
-Import LogXpert in your project and use it to log messages:
+CommonJS:
 
 ```js
 const log = require('logxpert');
 
-// Log a general message
-log('This is a general log message.');
-
-// Log an error message
-log.error('This is an error message.');
-
-// Log a warning message
-log.warn('This is a warning message.');
-
-// Log an informational message
-log.info('This is an informational message.');
-
-// Log a debug message
-log.debug('This is a debug message.');
+log('general message');
+log.error('error message');
+log.warn('warn message');
+log.info('info with meta', { user: 1 });
+log.debug({ structured: 'object' });
+log.error(new Error('boom'));
 ```
 
-### Advanced Logging: File Output & Custom Console Timestamp
-
-LogXpert supports file logging using [winston](https://github.com/winstonjs/winston) and [winston-daily-rotate-file](https://github.com/winstonjs/winston-daily-rotate-file).
-
-Example configuration:
+ESM:
 
 ```js
-const log = require('logxpert');
+import log from 'logxpert';
 
-log.settings({ 
-    console: { 
-        enableTimestamp: true,
-        // You can now include decoration characters as desired:
-        timestampFormat: "This is the date: [YYYY-MM-DD HH:mm:ss] - ",
-        timestampPrefix: '',
-        timestampSuffix: ''
-    },
-    files: { 
-        folder: 'logs', 
-        filesName: 'YYYY-MM-DD', 
-        maxFile: '14d', 
-        maxSize: '20m', 
-        zippedArchive: false
-    }
+log.info('hello');
+```
+
+Set level (`LOG_LEVEL` env also respected):
+
+```js
+log.setLevel('info');
+console.log(log.getLevel());
+```
+
+Isolated instances and child loggers:
+
+```js
+const { createLogger } = require('logxpert');
+const apiLog = createLogger({ level: 'info' });
+apiLog.info('isolated');
+
+const child = log.child({ service: 'api' });
+child.info('child message');
+```
+
+### File output & console timestamp
+
+```js
+log.settings({
+  level: 'debug',
+  console: {
+    enableTimestamp: true,
+    timestampFormat: 'YYYY-MM-DD HH:mm:ss',
+    timestampPrefix: '',
+    timestampSuffix: '',
+    colorize: true
+  },
+  files: {
+    folder: 'logs',
+    filename: 'application-%DATE%.log',
+    filesName: 'YYYY-MM-DD',
+    maxFile: '14d',
+    maxSize: '20m',
+    zippedArchive: false
+  }
 });
+```
+
+Close file transports on shutdown:
+
+```js
+log.close();
 ```
 
 ## API Reference
 
-- **log(message: string):**  
-  Logs a general message using the `info` level.
+- **log(message, ...meta):** info level.
+- **log.error/warn/info/debug/http/verbose/silly(message, ...meta)**
+- **log.log(level, message, ...meta)**
+- **log.settings({ console, files, level })**
+- **log.setLevel(level) / log.getLevel()**
+- **log.createLogger(options):** independent instance.
+- **log.child(meta):** child logger with bound context.
+- **log.close():** remove file transport.
 
-- **log.error(message: string):**  
-  Logs an error message.
-
-- **log.warn(message: string):**  
-  Logs a warning message.
-
-- **log.info(message: string):**  
-  Logs an informational message.
-
-- **log.debug(message: string):**  
-  Logs a debug message.
-
-- **log.settings(options: object):**  
-  Configures file logging and console output options.  
-  **Console Options:**
-  - `enableTimestamp` (boolean): Enable/disable timestamp (default: `true`).
-  - `timestampFormat` (string): Format for the timestamp including any desired literal text or decoration (default: `'YYYY-MM-DD HH:mm:ss'`).
-  - `timestampPrefix` (string): Prefix for the timestamp.
-  - `timestampSuffix` (string): Suffix for the timestamp.
-  
-  **Files Options:**
-  - `folder` (string): Directory where log files will be stored (default: `'logs'`).
-  - `filesName` (string): Date pattern for the log file name (default: `'YYYY-MM-DD'`).
-  - `maxFile` (string): Maximum file retention (default: `'14d'`).
-  - `maxSize` (string): Maximum size per log file (default: `'20m'`).
-  - `zippedArchive` (boolean): Archive logs in zip format (default: `false`).
+Console options: `enableTimestamp`, `timestampFormat`, `timestampPrefix`, `timestampSuffix`, `colorize`, `level`.
+Files options: `folder`, `filename`, `filesName`/`datePattern`, `maxFile`/`maxFiles`, `maxSize`, `zippedArchive`, `level`.
 
 ## License
 
-This project is licensed under GNU General Public License v3.0. See the [LICENSE](LICENSE) file for details.
+GPL-3.0-only. See [LICENSE](LICENSE).

@@ -1,197 +1,188 @@
 const fs = require('fs');
-const moment = require('moment'); // Add moment as a dependency: npm install moment
+const path = require('path');
+const dayjs = require('dayjs');
 const { createLogger, format, transports } = require('winston');
 require('winston-daily-rotate-file');
 
-/**
- * Helper function to format the timestamp while preserving square brackets.
- * It identifies square brackets and formats only the contents within them,
- * preserving all other text (including the brackets) as literal.
- * If no brackets are provided, the entire string is treated as a Moment.js format.
- *
- * @param {string} fmt - The user-defined format string.
- * @returns {string} - The formatted timestamp.
- *
- * Example:
- *   Input: "This is the date: [YYYY-MM-DD HH:mm:ss] - "
- *   Output: "This is the date: [2025-03-21 15:30:45] - "
- */
+const VALID_LEVELS = ['error', 'warn', 'info', 'http', 'verbose', 'debug', 'silly'];
+const DEFAULT_CONSOLE_FORMAT = 'YYYY-MM-DD HH:mm:ss';
+
 function formatCustomTimestamp(fmt) {
-    // If the format contains both [ and ], we use "template mode".
-    // This allows users to include literal text alongside bracketed date tokens.
-    if (fmt.includes('[') && fmt.includes(']')) {
-        return fmt.split(/(\[[^\]]*\])/).map(part => {
-            if (part.startsWith('[') && part.endsWith(']')) {
-                // Inside brackets: format the content while keeping the brackets literal.
-                const inner = part.slice(1, -1);
-                return '[' + (inner ? moment().format(inner) : '') + ']';
-            }
-            // Outside brackets: treat as literal text to avoid mangling letters.
-            return part;
-        }).join('');
-    }
-    // Standard mode: treat the whole string as a moment format string.
-    return moment().format(fmt);
+  if (typeof fmt !== 'string' || !fmt) return dayjs().format(DEFAULT_CONSOLE_FORMAT);
+  if (fmt.includes('[') && fmt.includes(']')) {
+    return fmt.split(/(\[[^\]]*\])/).map((part) => {
+      if (part.startsWith('[') && part.endsWith(']')) {
+        const inner = part.slice(1, -1);
+        return '[' + (inner ? dayjs().format(inner) : '') + ']';
+      }
+      return part;
+    }).join('');
+  }
+  return dayjs().format(fmt);
 }
 
+function formatExtra(meta) {
+  const keys = Object.keys(meta).filter((k) => k !== 'splat' && k !== 'ms');
+  if (!keys.length) return '';
+  try {
+    const picked = {};
+    for (const k of keys) picked[k] = meta[k];
+    return JSON.stringify(picked);
+  } catch {
+    return '';
+  }
+}
 
-/**
- * @typedef {Object} ConsoleOptions
- * @property {boolean} [enableTimestamp=true] - Enable or disable timestamp in console logs.
- * @property {string} [timestampFormat='YYYY-MM-DD HH:mm:ss'] - Custom format for the timestamp.
- *   Use square brackets (e.g., [YYYY-MM-DD]) to mark parts that should be formatted.
- *   Text outside brackets is treated as literal.
- * @property {string} [timestampPrefix=''] - Optional text to prepend to the timestamp.
- * @property {string} [timestampSuffix=''] - Optional text to append to the timestamp.
- */
-
-/**
- * @typedef {Object} FilesOptions
- * @property {string} [folder='logs'] - Directory where log files will be stored.
- * @property {string} [filesName='YYYY-MM-DD'] - Date pattern used in the log file name.
- * @property {string} [maxFile='14d'] - Maximum file retention time.
- * @property {string} [maxSize='20m'] - Maximum file size per log file.
- * @property {boolean} [zippedArchive=false] - Whether to archive logs as zip.
- */
-
-/**
- * @typedef {Object} LogSettingsOptions
- * @property {ConsoleOptions} [console] - Options for customizing console output.
- * @property {FilesOptions} [files] - Options for configuring file logging.
- */
-
-// Custom format for logger output
-const customFormat = format.printf(({ timestamp, level, message }) => {
-    return timestamp ? `${timestamp} [${level}]: ${message}` : `[${level}]: ${message}`;
+const prettyFormat = format.printf(({ timestamp, level, message, ...meta }) => {
+  const msg = typeof message === 'string' ? message : message == null ? '' : JSON.stringify(message);
+  const extra = formatExtra(meta);
+  const body = [msg, extra].filter(Boolean).join(' ');
+  return timestamp ? `${timestamp} [${level}]: ${body}` : `[${level}]: ${body}`;
 });
 
-// Default console timestamp format
-const defaultConsoleFormat = 'YYYY-MM-DD HH:mm:ss';
+function assertLevel(level) {
+  if (!VALID_LEVELS.includes(level)) throw new Error(`Invalid log level "${level}". Use one of: ${VALID_LEVELS.join(', ')}`);
+}
 
-// Create the global logger. Its default format will be overridden by the console transport settings.
-const logger = createLogger({
-    level: 'debug',
-    format: format.combine(
-        format.timestamp({ format: () => moment().format(defaultConsoleFormat) }),
-        customFormat
-    )
-});
+function normalizeFilesOptions(files = {}) {
+  const folder = files.folder ?? 'logs';
+  if (typeof folder !== 'string' || !folder.trim() || folder.includes('\0')) {
+    throw new Error('files.folder must be a non-empty string');
+  }
+  const datePattern = files.filesName ?? files.datePattern ?? 'YYYY-MM-DD';
+  if (typeof datePattern !== 'string' || !datePattern.trim()) {
+    throw new Error('files.filesName/datePattern must be a non-empty string');
+  }
+  let filename = files.filename ?? `application-%DATE%.log`;
+  if (typeof filename !== 'string' || !filename.trim()) {
+    throw new Error('files.filename must be a non-empty string');
+  }
+  if (!filename.includes('%DATE%')) {
+    const ext = path.extname(filename) || '.log';
+    const base = path.basename(filename, ext);
+    filename = `${base}-%DATE%${ext}`;
+  }
+  return {
+    folder: path.normalize(folder),
+    datePattern,
+    filename,
+    maxFiles: files.maxFile ?? files.maxFiles ?? '14d',
+    maxSize: files.maxSize ?? '20m',
+    zippedArchive: files.zippedArchive ?? false,
+    level: files.level,
+  };
+}
 
-// Create default console transport (will be replaced via settings)
-let consoleTransport = new transports.Console({
-    format: format.combine(
-        format.colorize(),
-        format.timestamp({ format: () => moment().format(defaultConsoleFormat) }),
-        customFormat
-    )
-});
-logger.add(consoleTransport);
+function buildConsoleTransport({ enableTimestamp = true, timestampFormat = DEFAULT_CONSOLE_FORMAT, timestampPrefix = '', timestampSuffix = '', colorize = true, level } = {}) {
+  const parts = [];
+  if (colorize) parts.push(format.colorize());
+  if (enableTimestamp) {
+    parts.push(format.timestamp({ format: () => `${timestampPrefix}${formatCustomTimestamp(timestampFormat)}${timestampSuffix}` }));
+  } else {
+    parts.push(format((info) => { delete info.timestamp; return info; })());
+  }
+  parts.push(format.errors({ stack: true }), format.splat(), prettyFormat);
+  return new transports.Console({ format: format.combine(...parts), level });
+}
 
-// Reference to file transport (added via settings)
-let fileTransport;
+function buildFileTransport({ folder, datePattern, filename, maxFiles, maxSize, zippedArchive, level }) {
+  if (!fs.existsSync(folder)) fs.mkdirSync(folder, { recursive: true });
+  return new transports.DailyRotateFile({
+    filename: path.join(folder, filename),
+    datePattern,
+    zippedArchive,
+    maxSize,
+    maxFiles,
+    level,
+    format: format.combine(format.errors({ stack: true }), format.splat(), format.timestamp(), prettyFormat),
+  });
+}
 
-/**
- * Configures logging settings for both console and file transports.
- *
- * @param {LogSettingsOptions} options - The settings for both console and file logging.
- * @example
- * // Example: Fully custom console timestamp that preserves decorational brackets,
- * // and enabling file logging.
- * log.settings({ 
- *   console: { 
- *     enableTimestamp: true,
- *     timestampFormat: "This is the date: [YYYY-MM-DD HH:mm:ss] - "
- *   },
- *   files: { 
- *     folder: 'logs', 
- *     filesName: 'YYYY-MM-DD', 
- *     maxFile: '14d', 
- *     maxSize: '20m', 
- *     zippedArchive: false 
- *   }
- * });
- */
-function applySettings(options = {}) {
+function createLoggerInstance(initial = {}) {
+  const globalLevel = process.env.LOG_LEVEL || initial.level || 'debug';
+  assertLevel(globalLevel);
+
+  const logger = createLogger({
+    level: globalLevel,
+    format: format.combine(format.errors({ stack: true }), format.splat()),
+  });
+
+  let consoleTransport = buildConsoleTransport(initial.console);
+  consoleTransport.level = initial.console?.level;
+  logger.add(consoleTransport);
+
+  let fileTransport = null;
+  let consoleOpts = { ...(initial.console || {}) };
+  let filesOpts = null;
+
+  function applySettings(options = {}) {
+    if (options.level !== undefined) {
+      assertLevel(options.level);
+      logger.level = options.level;
+    }
     if (options.console) {
-        const enableTimestamp = options.console.enableTimestamp !== undefined ? options.console.enableTimestamp : true;
-        const timestampFormat = options.console.timestampFormat || defaultConsoleFormat;
-        const timestampPrefix = options.console.timestampPrefix || '';
-        const timestampSuffix = options.console.timestampSuffix || '';
-
-        // Remove the current console transport
-        logger.remove(consoleTransport);
-
-        // Build the console format based on the enableTimestamp flag.
-        const consoleFormat = enableTimestamp
-            ? format.combine(
-                format.colorize(),
-                format.timestamp({ format: () => timestampPrefix + formatCustomTimestamp(timestampFormat) + timestampSuffix }),
-                customFormat
-            )
-            : format.combine(
-                format((info) => { delete info.timestamp; return info; })(),
-                format.colorize(),
-                customFormat
-            );
-
-        consoleTransport = new transports.Console({
-            format: consoleFormat
-        });
-        logger.add(consoleTransport);
+      if (options.console.level !== undefined && options.console.level !== null) assertLevel(options.console.level);
+      consoleOpts = { ...consoleOpts, ...options.console };
+      logger.remove(consoleTransport);
+      consoleTransport = buildConsoleTransport(consoleOpts);
+      consoleTransport.level = consoleOpts.level;
+      logger.add(consoleTransport);
     }
-
     if (options.files) {
-        const folder = options.files.folder || 'logs';
-        const datePattern = options.files.filesName || 'YYYY-MM-DD';
-        const maxFiles = options.files.maxFile || '14d';
-        const maxSize = options.files.maxSize || '20m';
-        const zippedArchive = options.files.zippedArchive !== undefined ? options.files.zippedArchive : false;
-
-        if (!fs.existsSync(folder)) {
-            fs.mkdirSync(folder, { recursive: true });
-        }
-
-        if (fileTransport) {
-            logger.remove(fileTransport);
-        }
-
-        fileTransport = new transports.DailyRotateFile({
-            filename: `${folder}/application-%DATE%.log`,
-            datePattern,
-            zippedArchive,
-            maxSize,
-            maxFiles
-        });
-        logger.add(fileTransport);
+      const normalized = normalizeFilesOptions(options.files);
+      if (normalized.level !== undefined && normalized.level !== null) assertLevel(normalized.level);
+      filesOpts = normalized;
+      if (fileTransport) logger.remove(fileTransport);
+      fileTransport = buildFileTransport(normalized);
+      logger.add(fileTransport);
     }
+  }
+
+  function write(level, message, ...meta) {
+    if (message instanceof Error) {
+      logger.log(level, message.message, { stack: message.stack, ...meta[0] });
+      return;
+    }
+    logger.log(level, message, ...meta);
+  }
+
+  function callable(message, ...meta) {
+    write('info', message, ...meta);
+  }
+
+  callable.error = (m, ...a) => write('error', m, ...a);
+  callable.warn = (m, ...a) => write('warn', m, ...a);
+  callable.info = (m, ...a) => write('info', m, ...a);
+  callable.debug = (m, ...a) => write('debug', m, ...a);
+  callable.http = (m, ...a) => write('http', m, ...a);
+  callable.verbose = (m, ...a) => write('verbose', m, ...a);
+  callable.silly = (m, ...a) => write('silly', m, ...a);
+  callable.log = (level, m, ...a) => { assertLevel(level); write(level, m, ...a); };
+
+  callable.settings = applySettings;
+  callable.setLevel = (level) => { assertLevel(level); logger.level = level; };
+  callable.getLevel = () => logger.level;
+  callable.child = (meta = {}) => {
+    const child = logger.child(meta);
+    return {
+      error: (m, ...a) => child.error(m, ...a),
+      warn: (m, ...a) => child.warn(m, ...a),
+      info: (m, ...a) => child.info(m, ...a),
+      debug: (m, ...a) => child.debug(m, ...a),
+      log: child.log.bind(child),
+    };
+  };
+  callable.close = () => {
+    if (fileTransport) { logger.remove(fileTransport); try { fileTransport.close?.(); } catch {} fileTransport = null; }
+  };
+  callable.createLogger = (opts = {}) => createLoggerInstance(opts);
+  callable._winston = logger;
+
+  if (initial.files) applySettings({ files: initial.files });
+  if (initial.console || initial.level) applySettings({ console: initial.console, level: initial.level });
+
+  return callable;
 }
 
-/**
- * Logs a general message using the info level.
- *
- * @param {string} message - The message to be logged.
- */
-function log(message) {
-    logger.info(message);
-}
-
-log.error = function (message) {
-    logger.error(message);
-};
-
-log.warn = function (message) {
-    logger.warn(message);
-};
-
-log.info = function (message) {
-    logger.info(message);
-};
-
-log.debug = function (message) {
-    logger.debug(message);
-};
-
-// Expose the settings function for configuring both file logging and console output.
-log.settings = applySettings;
-
-module.exports = log;
+module.exports = createLoggerInstance();
+module.exports.createLogger = createLoggerInstance;

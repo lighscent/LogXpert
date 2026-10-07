@@ -1,13 +1,50 @@
 {
   "name": "logxpert",
-  "version": "1.0.5",
-  "description": "A powerful logging library for Node.js",
+  "version": "2.0.0",
+  "description": "A powerful logging library for Node.js with colorful output and daily file rotation",
   "main": "main.js",
-  "repository": "git+https://github.com/lighscent/LogXpert.git",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./main.mjs",
+      "require": "./main.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "main.js",
+    "main.mjs",
+    "index.d.ts",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lighscent/LogXpert.git"
+  },
+  "bugs": {
+    "url": "https://github.com/lighscent/LogXpert/issues"
+  },
+  "homepage": "https://github.com/lighscent/LogXpert#readme",
   "author": "https://github.com/lighscent",
-  "license": "MIT",
+  "license": "GPL-3.0-only",
+  "keywords": [
+    "logging",
+    "logger",
+    "winston",
+    "daily-rotate",
+    "nodejs"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test test/logger.test.js"
+  },
   "dependencies": {
-    "moment": "^2.30.1",
+    "dayjs": "^1.11.23",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0"
   }

@@ -1,3 +1,6 @@
 node_modules
-test
 logs
+*.log
+coverage
+.nyc_output
+.DS_Store

@@ -1,0 +1,63 @@
+name: Release
+on:
+  push:
+    branches: [master]
+    paths: [package.json]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Run tests
+        run: |
+          npm install
+          npm test
+
+      - name: Create GitHub Release from package.json version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v$VERSION"
+          echo "Version: $VERSION / Tag: $TAG"
+
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $TAG existe deja, skip."
+            exit 0
+          fi
+
+          PREV_TAG=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 1 --json tagName -q '.[0].tagName' 2>/dev/null || true)
+          if [ -z "$PREV_TAG" ]; then
+            PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
+          fi
+          echo "Tag precedent: ${PREV_TAG:-aucun}"
+
+          if [ -n "$PREV_TAG" ]; then
+            RANGE="$PREV_TAG..HEAD"
+            COMPARE_URL="https://github.com/$GITHUB_REPOSITORY/compare/$PREV_TAG...$TAG"
+          else
+            RANGE="HEAD"
+            COMPARE_URL="https://github.com/$GITHUB_REPOSITORY/commits/$TAG"
+          fi
+
+          COMMITS=$(git log "$RANGE" --pretty=format:'- %h %s (%an)' --no-merges)
+          if [ -z "$COMMITS" ]; then
+            COMMITS="- Aucun commit listable"
+          fi
+
+          NOTES="## LogXpert $TAG"$'\n\n'"### Commits depuis ${PREV_TAG:-le debut}"$'\n\n'"$COMMITS"$'\n\n'"[Comparer]($COMPARE_URL)"
+
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "LogXpert $TAG" \
+            --notes "$NOTES" \
+            --target "$GITHUB_SHA"

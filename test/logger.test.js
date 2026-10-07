@@ -81,6 +81,50 @@ describe('logxpert v2', () => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
+  it('runNumber is disabled by default', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'logxpert-'));
+    const inst = log.createLogger();
+    inst.settings({ files: { folder: dir, appName: 'myapp' } });
+    inst.info('norun-test-message');
+    const file = await waitForLog(dir, 'norun-test-message');
+    assert.match(file, /^myapp-\d{4}-\d{2}-\d{2}\.log$/);
+    inst.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('runNumber increments across restarts', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'logxpert-'));
+    const a = log.createLogger();
+    a.settings({ files: { folder: dir, appName: 'myapp', runNumber: true } });
+    a.info('run-1-message');
+    const f1 = await waitForLog(dir, 'run-1-message');
+    assert.match(f1, /^myapp-\d{4}-\d{2}-\d{2}-1\.log$/);
+    a.close();
+    const b = log.createLogger();
+    b.settings({ files: { folder: dir, appName: 'myapp', runNumber: true } });
+    b.info('run-2-message');
+    const f2 = await waitForLog(dir, 'run-2-message');
+    assert.match(f2, /^myapp-\d{4}-\d{2}-\d{2}-2\.log$/);
+    b.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('runNumber format is customizable', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'logxpert-'));
+    const inst = log.createLogger();
+    inst.settings({ files: { folder: dir, appName: 'myapp', runNumber: { separator: '_', padding: 3 } } });
+    inst.info('runcustom-test-message');
+    const file = await waitForLog(dir, 'runcustom-test-message');
+    assert.match(file, /^myapp-\d{4}-\d{2}-\d{2}_001\.log$/);
+    inst.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('runNumber rejects invalid options', () => {
+    assert.throws(() => log.settings({ files: { folder: 'x', runNumber: 'yes' } }), /runNumber/);
+    assert.throws(() => log.settings({ files: { folder: 'x', runNumber: { separator: '' } } }), /separator/);
+  });
+
   it('writes rotated file with custom filename', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'logxpert-'));
     const inst = log.createLogger();

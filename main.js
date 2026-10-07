@@ -64,11 +64,50 @@ function getDefaultAppName() {
   return cachedAppName;
 }
 
+function resolveRunNumber(folder, prefix, opt) {
+  let enabled = false;
+  let separator = '-';
+  let padding = 0;
+  let startAt = 1;
+  if (opt === true) {
+    enabled = true;
+  } else if (opt && typeof opt === 'object') {
+    enabled = opt.enabled ?? true;
+    if (opt.separator !== undefined) {
+      if (typeof opt.separator !== 'string' || !opt.separator) throw new Error('files.runNumber.separator must be a non-empty string');
+      separator = opt.separator;
+    }
+    if (opt.padding !== undefined) {
+      if (!Number.isInteger(opt.padding) || opt.padding < 0) throw new Error('files.runNumber.padding must be a non-negative integer');
+      padding = opt.padding;
+    }
+    if (opt.startAt !== undefined) {
+      if (!Number.isInteger(opt.startAt) || opt.startAt < 0) throw new Error('files.runNumber.startAt must be a non-negative integer');
+      startAt = opt.startAt;
+    }
+  } else if (opt !== undefined && opt !== false) {
+    throw new Error('files.runNumber must be a boolean or an object');
+  }
+  if (!enabled) return null;
+  const counterFile = path.join(folder, `.${prefix}.run`);
+  let next = startAt;
+  try {
+    const raw = fs.readFileSync(counterFile, 'utf8').trim();
+    const prev = parseInt(raw, 10);
+    next = Number.isInteger(prev) ? prev + 1 : startAt;
+  } catch {}
+  try {
+    fs.writeFileSync(counterFile, String(next), 'utf8');
+  } catch {}
+  return separator + String(next).padStart(padding, '0');
+}
+
 function normalizeFilesOptions(files = {}) {
-  const folder = files.folder ?? 'logs';
-  if (typeof folder !== 'string' || !folder.trim() || folder.includes('\0')) {
+  const rawFolder = files.folder ?? 'logs';
+  if (typeof rawFolder !== 'string' || !rawFolder.trim() || rawFolder.includes('\0')) {
     throw new Error('files.folder must be a non-empty string');
   }
+  const folder = path.normalize(rawFolder);
   const datePattern = files.filesName ?? files.datePattern ?? 'YYYY-MM-DD';
   if (typeof datePattern !== 'string' || !datePattern.trim()) {
     throw new Error('files.filesName/datePattern must be a non-empty string');
@@ -82,8 +121,16 @@ function normalizeFilesOptions(files = {}) {
     const base = path.basename(filename, ext);
     filename = `${base}-%DATE%${ext}`;
   }
+  if (!fs.existsSync(folder)) fs.mkdirSync(folder, { recursive: true });
+  const prefix = path.basename(filename).split('%DATE%')[0].replace(/[-_.]+$/, '') || 'application';
+  const runSuffix = resolveRunNumber(folder, sanitizeAppName(prefix) ?? 'application', files.runNumber ?? false);
+  if (runSuffix) {
+    const ext = path.extname(filename) || '.log';
+    const base = filename.slice(0, -ext.length);
+    filename = `${base}${runSuffix}${ext}`;
+  }
   return {
-    folder: path.normalize(folder),
+    folder,
     datePattern,
     filename,
     maxFiles: files.maxFile ?? files.maxFiles ?? '14d',

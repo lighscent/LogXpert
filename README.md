@@ -94,7 +94,13 @@ log.close();
 - **log.close():** remove file transport.
 
 Console options: `enableTimestamp`, `timestampFormat`, `timestampPrefix`, `timestampSuffix`, `colorize`, `level`.
-Files options: `folder`, `filename`, `appName`, `filesName`/`datePattern`, `maxFile`/`maxFiles`, `maxSize`, `zippedArchive`, `level`.
+Files options: `folder`, `filename`, `appName`, `runNumber`, `filesName`/`datePattern`, `maxFile`/`maxFiles`, `maxSize`, `zippedArchive`, `level`.
+
+`runNumber` is disabled by default. Set `runNumber: true` to append an
+incrementing run counter persisted in `<folder>/ .<prefix>.run`
+(e.g. `application-2026_10_07-1.log`, then `-2.log` on next start).
+Customize with `runNumber: { separator: '-', padding: 3, startAt: 1 }`
+(e.g. `separator: '_'` + `padding: 3` gives `app-2026-10-07_001.log`).
 
 ## License
 

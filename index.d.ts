@@ -9,12 +9,20 @@ export interface ConsoleOptions {
   level?: LogLevel;
 }
 
+export interface RunNumberOptions {
+  enabled?: boolean;
+  separator?: string;
+  padding?: number;
+  startAt?: number;
+}
+
 export interface FilesOptions {
   folder?: string;
   filesName?: string;
   datePattern?: string;
   filename?: string;
   appName?: string;
+  runNumber?: boolean | RunNumberOptions;
   maxFile?: string;
   maxFiles?: string;
   maxSize?: string;

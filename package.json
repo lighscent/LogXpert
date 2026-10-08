@@ -1,6 +1,6 @@
 {
   "name": "logxpert",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "A powerful logging library for Node.js with colorful output and daily file rotation",
   "main": "main.js",
   "types": "index.d.ts",

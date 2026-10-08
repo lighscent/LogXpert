@@ -73,10 +73,26 @@ function assertFilenameSafe(filename) {
   }
 }
 
+function isSafeChar(c) {
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c === '.' || c === '_' || c === '-';
+}
+
+function isPadChar(c) {
+  return c === '-' || c === '_' || c === '.';
+}
+
 function sanitizeAppName(name) {
   if (typeof name !== 'string' || !name.trim()) return null;
-  const base = name.trim().split('/').pop();
-  const safe = base.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^[-_.]+|[-_.]+$/g, '');
+  const base = name.trim().slice(0, 200).split('/').pop();
+  let out = '';
+  for (let i = 0; i < base.length; i++) {
+    out += isSafeChar(base[i]) ? base[i] : '-';
+  }
+  let start = 0;
+  while (start < out.length && isPadChar(out[start])) start++;
+  let end = out.length;
+  while (end > start && isPadChar(out[end - 1])) end--;
+  const safe = out.slice(start, end);
   return safe || null;
 }
 
@@ -156,7 +172,10 @@ function normalizeFilesOptions(files = {}) {
   }
   assertFilenameSafe(filename);
   if (!fs.existsSync(folder)) fs.mkdirSync(folder, { recursive: true });
-  const prefix = path.basename(filename).split('%DATE%')[0].replace(/[-_.]+$/, '') || 'application';
+  const rawPrefix = path.basename(filename).split('%DATE%')[0];
+  let prefixEnd = rawPrefix.length;
+  while (prefixEnd > 0 && isPadChar(rawPrefix[prefixEnd - 1])) prefixEnd--;
+  const prefix = rawPrefix.slice(0, prefixEnd) || 'application';
   const runSuffix = resolveRunNumber(folder, sanitizeAppName(prefix) ?? 'application', files.runNumber ?? false);
   if (runSuffix) {
     const ext = path.extname(filename) || '.log';

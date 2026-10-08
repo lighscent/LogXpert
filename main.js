@@ -82,12 +82,42 @@ function assertLevel(level) {
   if (!VALID_LEVELS.includes(level)) throw new Error(`Invalid log level "${level}". Use one of: ${VALID_LEVELS.join(', ')}`);
 }
 
-const ANSI_RE = /\x1b\][^\x07]*(?:\x07|\x1b\\)|\x1b\[[0-9;?]*[a-zA-Z]|\x1b[()][0-9A-B]|\x1b[^[]/g;
+function stripAnsi(str) {
+  let out = '';
+  let i = 0;
+  while (i < str.length) {
+    if (str[i] !== '\x1b') {
+      out += str[i];
+      i++;
+      continue;
+    }
+    const next = str[i + 1];
+    if (next === ']') {
+      let j = i + 2;
+      while (j < str.length) {
+        if (str[j] === '\x07') { j++; break; }
+        if (str[j] === '\x1b' && str[j + 1] === '\\') { j += 2; break; }
+        j++;
+      }
+      i = j;
+    } else if (next === '[') {
+      let j = i + 2;
+      while (j < str.length && str[j] >= ' ' && str[j] <= '?') j++;
+      if (j < str.length) j++;
+      i = j;
+    } else if (next === '(' || next === ')') {
+      i += 3;
+    } else {
+      i += next === undefined ? 1 : 2;
+    }
+  }
+  return out;
+}
 const CONTROL_RE = /[\x00-\x08\x0b\x0c\x0d\x0e-\x1f\x7f]/g;
 
 function sanitizeMessage(msg) {
   if (typeof msg !== 'string') return msg;
-  return msg.replace(ANSI_RE, '').replace(CONTROL_RE, '');
+  return stripAnsi(msg).replace(CONTROL_RE, '');
 }
 
 function assertFilenameSafe(filename) {

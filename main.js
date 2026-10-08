@@ -1,8 +1,9 @@
 const fs = require('fs');
 const path = require('path');
+const util = require('util');
 const dayjs = require('dayjs');
-const { createLogger, format, transports } = require('winston');
-require('winston-daily-rotate-file');
+const { MiniLogger, ConsoleTransport, colorizeLevel } = require('./lib/mini');
+const { FileTransport } = require('./lib/rotate');
 
 const VALID_LEVELS = ['error', 'warn', 'info', 'http', 'verbose', 'debug', 'silly'];
 const DEFAULT_CONSOLE_FORMAT = 'YYYY-MM-DD HH:mm:ss';
@@ -71,12 +72,28 @@ function formatExtra(meta) {
   }
 }
 
-const prettyFormat = format.printf(({ timestamp, level, message, ...meta }) => {
+function mergeMeta(meta) {
+  const out = {};
+  for (const m of meta) {
+    if (m && typeof m === 'object') Object.assign(out, m);
+  }
+  return out;
+}
+
+function renderBody(message, meta) {
+  if (typeof message === 'string' && meta.length && /%[sdifoO%]/.test(message)) {
+    return util.format(message, ...meta);
+  }
   const msg = typeof message === 'string' ? message : message == null ? '' : JSON.stringify(message);
-  const extra = formatExtra(meta);
-  const body = [msg, extra].filter(Boolean).join(' ');
-  return timestamp ? `${timestamp} [${level}]: ${body}` : `[${level}]: ${body}`;
-});
+  const extra = formatExtra(mergeMeta(meta));
+  return [msg, extra].filter(Boolean).join(' ');
+}
+
+function buildLine(timestamp, level, message, meta, tag) {
+  const body = renderBody(message, meta);
+  const label = tag ?? `[${level}]`;
+  return timestamp ? `${timestamp} ${label}: ${body}` : `${label}: ${body}`;
+}
 
 function assertLevel(level) {
   if (!VALID_LEVELS.includes(level)) throw new Error(`Invalid log level "${level}". Use one of: ${VALID_LEVELS.join(', ')}`);
@@ -250,28 +267,26 @@ function normalizeFilesOptions(files = {}) {
 }
 
 function buildConsoleTransport({ enableTimestamp = true, timestampFormat = DEFAULT_CONSOLE_FORMAT, timestampPrefix = '', timestampSuffix = '', colorize = true, level } = {}) {
-  const parts = [];
-  if (colorize) parts.push(format.colorize());
-  if (enableTimestamp) {
-    const stamp = compileTimestampFormatter(timestampFormat);
-    parts.push(format.timestamp({ format: () => `${timestampPrefix}${stamp()}${timestampSuffix}` }));
-  } else {
-    parts.push(format((info) => { delete info.timestamp; return info; })());
-  }
-  parts.push(format.errors({ stack: true }), format.splat(), prettyFormat);
-  return new transports.Console({ format: format.combine(...parts), level });
+  const stamp = enableTimestamp ? compileTimestampFormatter(timestampFormat) : null;
+  const render = ({ level, message, meta }) => {
+    const timestamp = stamp ? `${timestampPrefix}${stamp()}${timestampSuffix}` : '';
+    const tag = colorize ? colorizeLevel(level, `[${level}]`) : `[${level}]`;
+    return buildLine(timestamp, level, message, meta, tag);
+  };
+  return new ConsoleTransport({ level, render });
 }
 
 function buildFileTransport({ folder, datePattern, filename, maxFiles, maxSize, zippedArchive, level }) {
   if (!fs.existsSync(folder)) fs.mkdirSync(folder, { recursive: true });
-  return new transports.DailyRotateFile({
-    filename: path.join(folder, filename),
+  return new FileTransport({
+    folder: path.normalize(folder),
+    filename,
     datePattern,
     zippedArchive,
     maxSize,
     maxFiles,
     level,
-    format: format.combine(format.errors({ stack: true }), format.splat(), format.timestamp(), prettyFormat),
+    render: ({ level, message, meta }) => buildLine(new Date().toISOString(), level, message, meta),
   });
 }
 
@@ -279,10 +294,7 @@ function createLoggerInstance(initial = {}) {
   const globalLevel = process.env.LOG_LEVEL || initial.level || 'debug';
   assertLevel(globalLevel);
 
-  const logger = createLogger({
-    level: globalLevel,
-    format: format.combine(format.errors({ stack: true }), format.splat()),
-  });
+  const logger = new MiniLogger({ level: globalLevel });
 
   let consoleTransport = buildConsoleTransport(initial.console);
   consoleTransport.level = initial.console?.level;

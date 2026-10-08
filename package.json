@@ -22,6 +22,7 @@
     "main.mjs",
     "index.d.ts",
     "index.d.mts",
+    "lib/",
     "README.md",
     "LICENSE",
     "CHANGELOG.md"
@@ -47,14 +48,12 @@
     "node": ">=18"
   },
   "scripts": {
-    "test": "node --test test/logger.test.js",
-    "check:types": "tsc -p test-d --noEmit",
+    "test": "node --test test/logger.test.js test/lib.test.js",
+    "check:types": "tsc -p test-d --noEmit && echo TYPES-OK",
     "attw": "attw --pack"
   },
   "dependencies": {
-    "dayjs": "^1.11.23",
-    "winston": "^3.19.0",
-    "winston-daily-rotate-file": "^5.0.0"
+    "dayjs": "^1.11.23"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",

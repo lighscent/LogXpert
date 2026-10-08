@@ -52,7 +52,7 @@ describe('logxpert v2', () => {
 
   it('settings rejects invalid files options', () => {
     assert.throws(() => log.settings({ files: { folder: '' } }), /folder/);
-    assert.throws(() => log.settings({ files: { folder: 'x', filesName: '' } }), /filesName/);
+    assert.throws(() => log.settings({ files: { folder: 'x', datePattern: '' } }), /datePattern/);
   });
 
   it('logs strings, objects and Errors without throwing', () => {
@@ -116,6 +116,32 @@ describe('logxpert v2', () => {
     inst.settings({ files: { folder: dir, appName: 'myapp', runNumber: { separator: '_', padding: 3 } } });
     assert.ok(fileTransport(inst).filename.endsWith('_001.log'));
     inst.close(); tmpDirs.push(dir);
+  });
+
+  it('supports new option names with legacy aliases', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'logxpert-'));
+    const inst = log.createLogger();
+    inst.settings({ files: { folder: dir, prefix: 'svc', dateFormat: 'YYYY-MM-DD' } });
+    assert.equal(fileTransport(inst).filename, 'svc-%DATE%.log');
+    inst.close();
+    const inst2 = log.createLogger();
+    inst2.settings({ files: { folder: dir, filePattern: 'custom-%DATE%.log' } });
+    assert.equal(fileTransport(inst2).filename, 'custom-%DATE%.log');
+    inst2.close();
+    tmpDirs.push(dir);
+  });
+
+  it('accepts %datePattern% placeholder and converts it for winston', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'logxpert-'));
+    const inst = log.createLogger();
+    inst.settings({ files: { folder: dir, filePattern: 'app-%datePattern%.log' } });
+    assert.equal(fileTransport(inst).filename, 'app-%DATE%.log');
+    inst.close(); tmpDirs.push(dir);
+  });
+
+  it('rejects combining prefix with filePattern', () => {
+    assert.throws(() => log.settings({ files: { folder: 'x', prefix: 'a', filePattern: 'b-%DATE%.log' } }), /pick one/);
+    assert.throws(() => log.settings({ files: { folder: 'x', appName: 'a', filename: 'b-%DATE%.log' } }), /pick one/);
   });
 
   it('runNumber rejects invalid options', () => {

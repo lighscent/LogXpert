@@ -137,11 +137,17 @@ function normalizeFilesOptions(files = {}) {
     throw new Error('files.folder must be a non-empty string');
   }
   const folder = path.normalize(rawFolder);
-  const datePattern = files.filesName ?? files.datePattern ?? 'YYYY_MM_DD';
+  const datePattern = files.datePattern ?? files.dateFormat ?? files.filesName ?? 'YYYY_MM_DD';
   if (typeof datePattern !== 'string' || !datePattern.trim()) {
-    throw new Error('files.filesName/datePattern must be a non-empty string');
+    throw new Error('files.datePattern must be a non-empty string');
   }
-  let filename = files.filename ?? `${sanitizeAppName(files.appName) ?? getDefaultAppName()}-%DATE%.log`;
+  const explicitPattern = files.filePattern ?? files.pattern ?? files.filename;
+  const explicitPrefix = files.prefix ?? files.appName;
+  if (explicitPattern !== undefined && explicitPrefix !== undefined) {
+    throw new Error('Do not combine "prefix" with "filePattern", pick one: prefix builds "<prefix>-%DATE%.log" for you, filePattern takes full control');
+  }
+  let filename = explicitPattern ?? `${sanitizeAppName(explicitPrefix) ?? getDefaultAppName()}-%DATE%.log`;
+  filename = filename.split('%datePattern%').join('%DATE%');
   assertFilenameSafe(filename);
   if (!filename.includes('%DATE%')) {
     const ext = path.extname(filename) || '.log';

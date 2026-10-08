@@ -18,9 +18,19 @@ export interface RunNumberOptions {
 
 export interface FilesOptions {
   folder?: string;
-  filesName?: string;
+  /** Preferred: date format for %DATE%. */
   datePattern?: string;
+  /** @deprecated Use datePattern. */
+  filesName?: string;
+  dateFormat?: string;
+  /** Preferred: filename template containing %DATE%. */
+  filePattern?: string;
+  pattern?: string;
+  /** @deprecated Use filePattern. */
   filename?: string;
+  /** Preferred: filename prefix used when no pattern is given. */
+  prefix?: string;
+  /** @deprecated Use prefix. */
   appName?: string;
   runNumber?: boolean | RunNumberOptions;
   maxFile?: string;

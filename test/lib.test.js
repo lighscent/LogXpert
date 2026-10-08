@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const zlib = require('node:zlib');
 
 const { LEVELS, MiniLogger, ConsoleTransport } = require('../lib/mini');
 const { FileTransport, parseSize, parseDays } = require('../lib/rotate');
@@ -139,6 +140,93 @@ describe('file rotation', () => {
     assert.equal(t.filename, 'app-%DATE%.log');
     assert.equal(t.options.datePattern, 'YYYY-MM-DD');
     t.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('gzips the previous file on date change when enabled', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'logxpert-'));
+    const t = new FileTransport({
+      folder: dir,
+      filename: 'app-%DATE%.log',
+      datePattern: 'YYYY_MM_DD',
+      zippedArchive: true,
+      render: (e) => String(e.message),
+    });
+    const prev = path.join(dir, 'app-2026_10_01.log');
+    fs.writeFileSync(prev, 'old-content');
+    t.onDateChanged(prev);
+    assert.ok(!fs.existsSync(prev), 'original should be removed');
+    assert.ok(fs.existsSync(prev + '.gz'), 'gzip should exist');
+    assert.equal(zlib.gunzipSync(fs.readFileSync(prev + '.gz')).toString(), 'old-content');
+    t.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('leaves the previous file alone without zippedArchive', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'logxpert-'));
+    const t = new FileTransport({
+      folder: dir,
+      filename: 'app-%DATE%.log',
+      datePattern: 'YYYY_MM_DD',
+      render: (e) => String(e.message),
+    });
+    const prev = path.join(dir, 'app-2026_10_01.log');
+    fs.writeFileSync(prev, 'old-content');
+    t.onDateChanged(prev);
+    assert.ok(fs.existsSync(prev), 'original should be kept');
+    assert.ok(!fs.existsSync(prev + '.gz'));
+    t.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('cleanupOld deletes only old log files', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'logxpert-'));
+    const t = new FileTransport({
+      folder: dir,
+      filename: 'app-%DATE%.log',
+      datePattern: 'YYYY_MM_DD',
+      maxFiles: '7d',
+      render: (e) => String(e.message),
+    });
+    const oldLog = path.join(dir, 'app-2026_10_01.log');
+    const recentLog = path.join(dir, 'app-2026_10_08.log');
+    const oldTxt = path.join(dir, 'notes.txt');
+    fs.writeFileSync(oldLog, 'x');
+    fs.writeFileSync(recentLog, 'x');
+    fs.writeFileSync(oldTxt, 'x');
+    const past = Date.now() / 1000 - 10 * 86400;
+    fs.utimesSync(oldLog, past, past);
+    fs.utimesSync(oldTxt, past, past);
+    t.cleanupOld();
+    assert.ok(!fs.existsSync(oldLog), 'old log deleted');
+    assert.ok(fs.existsSync(recentLog), 'recent log kept');
+    assert.ok(fs.existsSync(oldTxt), 'non-log files untouched');
+    t.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('reopens a new file when the date changes', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'logxpert-'));
+    const t = new FileTransport({
+      folder: dir,
+      filename: 'app-%DATE%.log',
+      datePattern: 'YYYY_MM_DD',
+      render: (e) => String(e.message),
+    });
+    t.write(fileTransportEntry('info', 'first-day'));
+    t.rotateIfNeeded('2000_01_01', 10);
+    assert.ok(String(t.currentFile).includes('2000_01_01'), 'stream should point at the new date file');
+    t.write(fileTransportEntry('info', 'second-day'));
+    t.close();
+    const start = Date.now();
+    let files = [];
+    while (Date.now() - start < 3000) {
+      files = fs.readdirSync(dir).filter((f) => f.endsWith('.log'));
+      if (files.length >= 2) break;
+      await new Promise((r) => setTimeout(r, 10));
+    }
+    assert.ok(files.length >= 2, `expected two date files, got ${files}`);
+    assert.ok(files.some((f) => f.includes('2000_01_01')));
     fs.rmSync(dir, { recursive: true, force: true });
   });
 });

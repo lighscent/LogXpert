@@ -48,7 +48,8 @@
     "node": ">=18"
   },
   "scripts": {
-    "test": "node --test test/logger.test.js test/lib.test.js",
+    "test": "node --test --test-reporter=./test/reporter.js test/logger.test.js test/console.test.js test/files.test.js test/lib.test.js",
+    "test:demo": "node --test --test-reporter=./test/reporter.js demo/reporter.demo.test.js",
     "check:types": "tsc -p test-d --noEmit && echo TYPES-OK",
     "attw": "attw --pack"
   },

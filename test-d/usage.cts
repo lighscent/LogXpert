@@ -8,6 +8,7 @@ log.error(new Error('boom'));
 log.debug(() => 'lazy');
 log.settings({ files: { folder: 'logs', prefix: 'api' } });
 log.settings({ console: { colors: { debug: 'gray', silly: false } } });
+log.settings({ console: false }); // file-only: silence the console
 log.settings({ files: { filePattern: 'app-%datePattern%.log' } });
 const child: log.ChildLogger = log.child({ service: 'api' });
 child.warn('careful');

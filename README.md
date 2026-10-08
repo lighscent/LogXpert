@@ -94,6 +94,7 @@ log.settings({
     timestampSuffix: '',
     colorize: true,
     colors: { info: 'blue', warn: 208, error: false }
+    // enabled: false, // file-only logging: silence the console
   },
   files: {
     folder: 'logs',

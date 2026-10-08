@@ -4,6 +4,7 @@ declare namespace log {
   export type LevelColor = string | number | false | null;
 
   export interface ConsoleOptions {
+    enabled?: boolean;
     enableTimestamp?: boolean;
     timestampFormat?: string;
     timestampPrefix?: string;
@@ -45,7 +46,7 @@ declare namespace log {
   }
 
   export interface LogSettingsOptions {
-    console?: ConsoleOptions;
+    console?: ConsoleOptions | false;
     files?: FilesOptions;
     level?: LogLevel;
   }

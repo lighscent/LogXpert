@@ -1,5 +1,29 @@
 name: CI
-on: [push, pull_request]
+on:
+  push:
+    paths:
+      - 'main.js'
+      - 'main.mjs'
+      - 'index.d.ts'
+      - 'index.d.mts'
+      - 'lib/**'
+      - 'test/**'
+      - 'test-d/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    paths:
+      - 'main.js'
+      - 'main.mjs'
+      - 'index.d.ts'
+      - 'index.d.mts'
+      - 'lib/**'
+      - 'test/**'
+      - 'test-d/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/ci.yml'
 jobs:
   test:
     runs-on: ubuntu-latest

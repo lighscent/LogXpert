@@ -1,6 +1,6 @@
 # LogXpert
 
-LogXpert is a powerful logging library for Node.js that provides easy-to-use logging methods with colorful formatted output and optional file logging support.
+Colorful console logging for Node.js with optional daily file rotation.
 
 ## Installation
 
@@ -8,107 +8,97 @@ LogXpert is a powerful logging library for Node.js that provides easy-to-use log
 npm install logxpert
 ```
 
-## Usage
-
-CommonJS:
+## Quick start
 
 ```js
 const log = require('logxpert');
+// or: import log from 'logxpert';
 
-log('general message');
-log.error('error message');
-log.warn('warn message');
-log.info('info with meta', { user: 1 });
-log.debug({ structured: 'object' });
-log.error(new Error('boom'));
-
-// Lazy: evaluated only if the level is enabled (cheap debug in prod)
-log.debug(() => JSON.stringify(hugeObject));
+log('general message');          // shortcut for info
+log.info('hello', { user: 1 });  // with metadata
+log.error(new Error('boom'));    // Errors print message + stack
+log.debug(() => JSON.stringify(hugeObject)); // lazy: skipped if level disabled
 ```
 
-ESM:
+Levels: `error → warn → info → http → verbose → debug → silly` (default `debug`).
 
 ```js
-import log from 'logxpert';
-
-log.info('hello');
+log.setLevel('info'); // or via LOG_LEVEL env variable
 ```
 
-Set level (`LOG_LEVEL` env also respected):
+## File logging
 
 ```js
-log.setLevel('info');
-console.log(log.getLevel());
+log.settings({ files: { folder: 'logs' } });
+// → logs/logxpert-2026_10_08.log (prefix defaults to your package.json name)
+
+log.settings({ files: { folder: 'logs', prefix: 'api' } });
+// → logs/api-2026_10_08.log
+
+// Full control (omit prefix when used):
+log.settings({ files: { folder: 'logs', filePattern: 'app-%datePattern%.log' } });
 ```
 
-Isolated instances and child loggers:
-
-```js
-const { createLogger } = require('logxpert');
-const apiLog = createLogger({ level: 'info' });
-apiLog.info('isolated');
-
-const child = log.child({ service: 'api' });
-child.info('child message');
-```
-
-### File output & console timestamp
+`%datePattern%` is replaced by the date (`datePattern` defaults to `YYYY_MM_DD`). Combining `prefix` with `filePattern` throws — pick one.
 
 ```js
 log.settings({
-  level: 'debug',
+  files: {
+    folder: 'logs',
+    runNumber: true,    // off by default → app-2026_10_08-1.log, -2.log, ...
+    maxFile: '14d',     // retention
+    maxSize: '20m',     // rotate above this size
+    zippedArchive: true,
+  },
+});
+log.close(); // call on shutdown
+```
+
+## Console & instances
+
+```js
+log.settings({
+  console: {
+    enableTimestamp: true,
+    timestampFormat: 'YYYY-MM-DD HH:mm:ss',
+    colorize: true,
+  },
+});
+
+const { createLogger } = require('logxpert');
+const apiLog = createLogger({ level: 'info' }); // independent instance
+
+const child = log.child({ service: 'api' }); // bound context
+```
+
+## Full configuration (copy-paste)
+
+```js
+log.settings({
+  level: 'debug', // or process.env.LOG_LEVEL
   console: {
     enableTimestamp: true,
     timestampFormat: 'YYYY-MM-DD HH:mm:ss',
     timestampPrefix: '',
     timestampSuffix: '',
-    colorize: true
+    colorize: true,
   },
   files: {
     folder: 'logs',
-    // Default when omitted: `<package.json name>-%DATE%.log`
-    // with datePattern YYYY_MM_DD (e.g. logxpert-2026_10_07.log),
-    // fallback to application-%DATE%.log.
-    // Explicit filename always wins; appName overrides the auto prefix.
-    filename: 'logxpert-%DATE%.log',
-    appName: 'my-service',
-    filesName: 'YYYY_MM_DD',
+    prefix: undefined, // defaults to your package.json name
+    // filePattern: 'app-%datePattern%.log', // full control (omit prefix if used)
+    datePattern: 'YYYY_MM_DD',
+    runNumber: false, // or true, or { separator: '-', padding: 0, startAt: 1 }
     maxFile: '14d',
     maxSize: '20m',
-    zippedArchive: false
+    zippedArchive: false,
   }
 });
 ```
 
-Close file transports on shutdown:
+Legacy aliases: `appName` (= `prefix`), `filename`/`pattern` (= `filePattern`), `filesName`/`dateFormat` (= `datePattern`).
 
-```js
-log.close();
-```
-
-## API Reference
-
-- **log(message, ...meta):** info level.
-- **log.error/warn/info/debug/http/verbose/silly(message, ...meta)**
-- **log.log(level, message, ...meta)**
-- **log.settings({ console, files, level })**
-- **log.setLevel(level) / log.getLevel()**
-- **log.createLogger(options):** independent instance.
-- **log.child(meta):** child logger with bound context.
-- **log.close():** remove file transport.
-
-Console options: `enableTimestamp`, `timestampFormat`, `timestampPrefix`, `timestampSuffix`, `colorize`, `level`.
-Files options: `folder`, `filename`, `appName`, `runNumber`, `filesName`/`datePattern`, `maxFile`/`maxFiles`, `maxSize`, `zippedArchive`, `level`.
-
-`runNumber` is disabled by default. Set `runNumber: true` to append an
-incrementing run counter persisted in `<folder>/ .<prefix>.run`
-(e.g. `application-2026_10_07-1.log`, then `-2.log` on next start).
-Customize with `runNumber: { separator: '-', padding: 3, startAt: 1 }`
-(e.g. `separator: '_'` + `padding: 3` gives `app-2026_10_07_001.log`).
-
-Security notes: string messages are stripped of ANSI escape sequences and
-C0 control characters (except `\n`, `\t`); `files.filename` values escaping
-the log folder (`..`, absolute paths) are rejected.
+Security: messages are stripped of ANSI escapes and control characters (except `\n`, `\t`); file patterns escaping the log folder (`..`, absolute paths) are rejected.
 
 ## License
 

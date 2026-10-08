@@ -108,7 +108,7 @@ function normalizeFilesOptions(files = {}) {
     throw new Error('files.folder must be a non-empty string');
   }
   const folder = path.normalize(rawFolder);
-  const datePattern = files.filesName ?? files.datePattern ?? 'YYYY-MM-DD';
+  const datePattern = files.filesName ?? files.datePattern ?? 'YYYY_MM_DD';
   if (typeof datePattern !== 'string' || !datePattern.trim()) {
     throw new Error('files.filesName/datePattern must be a non-empty string');
   }

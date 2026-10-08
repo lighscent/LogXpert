@@ -64,11 +64,12 @@ log.settings({
   files: {
     folder: 'logs',
     // Default when omitted: `<package.json name>-%DATE%.log`
-    // (e.g. logxpert-2026-10-07.log), fallback to application-%DATE%.log.
+    // with datePattern YYYY_MM_DD (e.g. logxpert-2026_10_07.log),
+    // fallback to application-%DATE%.log.
     // Explicit filename always wins; appName overrides the auto prefix.
     filename: 'logxpert-%DATE%.log',
     appName: 'my-service',
-    filesName: 'YYYY-MM-DD',
+    filesName: 'YYYY_MM_DD',
     maxFile: '14d',
     maxSize: '20m',
     zippedArchive: false
@@ -100,7 +101,7 @@ Files options: `folder`, `filename`, `appName`, `runNumber`, `filesName`/`datePa
 incrementing run counter persisted in `<folder>/ .<prefix>.run`
 (e.g. `application-2026_10_07-1.log`, then `-2.log` on next start).
 Customize with `runNumber: { separator: '-', padding: 3, startAt: 1 }`
-(e.g. `separator: '_'` + `padding: 3` gives `app-2026-10-07_001.log`).
+(e.g. `separator: '_'` + `padding: 3` gives `app-2026_10_07_001.log`).
 
 ## License
 

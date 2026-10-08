@@ -8,6 +8,8 @@ Colorful console logging for Node.js with optional daily file rotation.
 npm install logxpert
 ```
 
+Requires Node.js `>=18`. Recommended minimum: Node.js 22 LTS. See [NODE_SUPPORT.md](NODE_SUPPORT.md) for the full support policy.
+
 ## Quick start
 
 ```js

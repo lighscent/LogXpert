@@ -104,4 +104,4 @@ Customize with `runNumber: { separator: '-', padding: 3, startAt: 1 }`
 
 ## License
 
-GPL-3.0-only. See [LICENSE](LICENSE).
+Apache-2.0. See [LICENSE](LICENSE).

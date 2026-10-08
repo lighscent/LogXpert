@@ -2,6 +2,11 @@
 
 Colorful console logging for Node.js with optional daily file rotation.
 
+- Zero heavy dependencies — built-in engine.
+- Daily file rotation with retention, size limits and gzip.
+- Per-level colors, lazy messages, child loggers, isolated instances.
+- Works from JS and TS, CommonJS and ESM.
+
 ## Installation
 
 ```sh
@@ -64,8 +69,12 @@ log.settings({
     enableTimestamp: true,
     timestampFormat: 'YYYY-MM-DD HH:mm:ss',
     colorize: true,
+    colors: { info: 'blue', error: false }, // names, ANSI 0-255, or false per level
   },
 });
+
+// Default colors: error red, warn yellow, info green, http magenta,
+// verbose cyan, debug blue, silly gray. Only the [level] tag is colored.
 
 const { createLogger } = require('logxpert');
 const apiLog = createLogger({ level: 'info' }); // independent instance
@@ -84,6 +93,7 @@ log.settings({
     timestampPrefix: '',
     timestampSuffix: '',
     colorize: true,
+    colors: { info: 'blue', warn: 208, error: false }
   },
   files: {
     folder: 'logs',

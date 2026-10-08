@@ -201,6 +201,40 @@ describe('logxpert v2', () => {
     assert.ok(!afterReset.includes('\x1b'), 'message must not be colored');
   });
 
+  it('applies custom level colors and rejects unknown ones', () => {
+    const inst = log.createLogger({ console: { colors: { info: 'blue', error: false } } });
+    const out = captureOutput(() => {
+      inst.info('custom-blue');
+      inst.error('plain-error');
+    });
+    inst.close();
+    assert.ok(out.includes('\x1b[34m[info]\x1b[0m'), 'info tag should be blue');
+    assert.ok(out.includes('[error]: plain-error'));
+    assert.ok(!out.includes('[31m[error]'), 'error tag must not be red');
+    assert.throws(() => log.createLogger({ console: { colors: { info: 'blurple' } } }), /Unknown color/);
+    assert.throws(() => log.createLogger({ console: { colors: ['red'] } }), /must be an object/);
+  });
+
+  it('applies a distinct color per level', () => {
+    const inst = log.createLogger({
+      level: 'silly',
+      console: { colors: { error: 'magenta', warn: 'cyan', info: 'blue', debug: 'gray', silly: 208 } },
+    });
+    const out = captureOutput(() => {
+      inst.error('e');
+      inst.warn('w');
+      inst.info('i');
+      inst.debug('d');
+      inst.silly('s');
+    });
+    inst.close();
+    assert.ok(out.includes('\x1b[35m[error]\x1b[0m'));
+    assert.ok(out.includes('\x1b[36m[warn]\x1b[0m'));
+    assert.ok(out.includes('\x1b[34m[info]\x1b[0m'));
+    assert.ok(out.includes('\x1b[90m[debug]\x1b[0m'));
+    assert.ok(out.includes('\x1b[208m[silly]\x1b[0m'));
+  });
+
   it('evaluates function messages lazily only when level enabled', () => {
     const inst = log.createLogger({ level: 'error' });
     let called = 0;

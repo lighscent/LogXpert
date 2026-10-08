@@ -37,6 +37,17 @@ describe('mini logger core', () => {
     assert.deepEqual(seen, [['err-t', 'kept'], ['all-t', 'kept']]);
   });
 
+  it('resolveLevelColors merges overrides over defaults', () => {
+    const { resolveLevelColors } = require('../lib/mini');
+    const map = resolveLevelColors({ info: 'blue', warn: 208, error: false });
+    assert.equal(map.info, 34);
+    assert.equal(map.warn, 208);
+    assert.ok(!('error' in map));
+    assert.equal(map.debug, 34);
+    assert.throws(() => resolveLevelColors({ info: 'blurple' }), /Unknown color/);
+    assert.throws(() => resolveLevelColors('red'), /must be an object/);
+  });
+
   it('remove() detaches and closes the transport', () => {
     let closed = 0;
     const t = { write: () => {}, close: () => { closed++; } };

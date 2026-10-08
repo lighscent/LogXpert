@@ -1,12 +1,15 @@
 declare namespace log {
   export type LogLevel = 'error' | 'warn' | 'info' | 'http' | 'verbose' | 'debug' | 'silly';
 
+  export type LevelColor = string | number | false | null;
+
   export interface ConsoleOptions {
     enableTimestamp?: boolean;
     timestampFormat?: string;
     timestampPrefix?: string;
     timestampSuffix?: string;
     colorize?: boolean;
+    colors?: Partial<Record<LogLevel, LevelColor>>;
     level?: LogLevel;
   }
 

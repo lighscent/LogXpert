@@ -1,17 +1,18 @@
 const fs = require('fs');
 const path = require('path');
-const { MiniLogger, ConsoleTransport, colorizeLevel } = require('./lib/mini');
+const { MiniLogger, ConsoleTransport, colorizeLevel, resolveLevelColors } = require('./lib/mini');
 const { FileTransport } = require('./lib/rotate');
 const { DEFAULT_CONSOLE_FORMAT, compileTimestampFormatter } = require('./lib/time');
 const { buildLine } = require('./lib/format');
 const { assertLevel, sanitizeMessage } = require('./lib/sanitize');
 const { normalizeFilesOptions } = require('./lib/files');
 
-function buildConsoleTransport({ enableTimestamp = true, timestampFormat = DEFAULT_CONSOLE_FORMAT, timestampPrefix = '', timestampSuffix = '', colorize = true, level } = {}) {
+function buildConsoleTransport({ enableTimestamp = true, timestampFormat = DEFAULT_CONSOLE_FORMAT, timestampPrefix = '', timestampSuffix = '', colorize = true, colors, level } = {}) {
   const stamp = enableTimestamp ? compileTimestampFormatter(timestampFormat) : null;
+  const palette = resolveLevelColors(colors);
   const render = ({ level, message, meta }) => {
     const timestamp = stamp ? `${timestampPrefix}${stamp()}${timestampSuffix}` : '';
-    const tag = colorize ? colorizeLevel(level, `[${level}]`) : `[${level}]`;
+    const tag = colorize ? colorizeLevel(level, `[${level}]`, palette) : `[${level}]`;
     return buildLine(timestamp, level, message, meta, tag);
   };
   return new ConsoleTransport({ level, render });

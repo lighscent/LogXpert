@@ -14,6 +14,7 @@ export const info: typeof log.info;
 export const debug: typeof log.debug;
 
 export type LogLevel = log.LogLevel;
+export type LevelColor = log.LevelColor;
 export type ConsoleOptions = log.ConsoleOptions;
 export type FilesOptions = log.FilesOptions;
 export type RunNumberOptions = log.RunNumberOptions;

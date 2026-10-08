@@ -6,9 +6,14 @@
   "types": "index.d.ts",
   "exports": {
     ".": {
-      "types": "./index.d.ts",
-      "import": "./main.mjs",
-      "require": "./main.js"
+      "import": {
+        "types": "./index.d.mts",
+        "default": "./main.mjs"
+      },
+      "require": {
+        "types": "./index.d.ts",
+        "default": "./main.js"
+      }
     },
     "./package.json": "./package.json"
   },
@@ -16,6 +21,7 @@
     "main.js",
     "main.mjs",
     "index.d.ts",
+    "index.d.mts",
     "README.md",
     "LICENSE",
     "CHANGELOG.md"
@@ -41,11 +47,17 @@
     "node": ">=18"
   },
   "scripts": {
-    "test": "node --test test/logger.test.js"
+    "test": "node --test test/logger.test.js",
+    "check:types": "tsc -p test-d --noEmit",
+    "attw": "attw --pack"
   },
   "dependencies": {
     "dayjs": "^1.11.23",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
+    "typescript": "^7.0.2"
   }
 }

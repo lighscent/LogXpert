@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+- Fix TS types for dual CJS/ESM: `export =` + namespace in `index.d.ts`, dedicated `index.d.mts` for the ESM entry (`attw` clean)
+- Rename `files` options with backward-compatible aliases: `prefix` (`appName`), `filePattern` (`filename`/`pattern`), `datePattern` (`filesName`/`dateFormat`); `%datePattern%` placeholder; `prefix` + `filePattern` now throws instead of silent precedence
+- Default file `datePattern` is now `YYYY_MM_DD`
+- License changed to `Apache-2.0`
+
 ## 2.0.0
 - Replace `moment` with `dayjs`
 - Add ESM entry (`main.mjs`) + `index.d.ts` types

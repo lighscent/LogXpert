@@ -21,6 +21,9 @@ log.warn('warn message');
 log.info('info with meta', { user: 1 });
 log.debug({ structured: 'object' });
 log.error(new Error('boom'));
+
+// Lazy: evaluated only if the level is enabled (cheap debug in prod)
+log.debug(() => JSON.stringify(hugeObject));
 ```
 
 ESM:
@@ -102,6 +105,10 @@ incrementing run counter persisted in `<folder>/ .<prefix>.run`
 (e.g. `application-2026_10_07-1.log`, then `-2.log` on next start).
 Customize with `runNumber: { separator: '-', padding: 3, startAt: 1 }`
 (e.g. `separator: '_'` + `padding: 3` gives `app-2026_10_07_001.log`).
+
+Security notes: string messages are stripped of ANSI escape sequences and
+C0 control characters (except `\n`, `\t`); `files.filename` values escaping
+the log folder (`..`, absolute paths) are rejected.
 
 ## License
 

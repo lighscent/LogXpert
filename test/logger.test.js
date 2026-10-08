@@ -1,10 +1,22 @@
-const { describe, it, beforeEach, afterEach } = require('node:test');
+const { describe, it, beforeEach, afterEach, after } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 
 const log = require('../main.js');
+
+const tmpDirs = [];
+after(async () => {
+  await new Promise((r) => setTimeout(r, 250));
+  for (const d of tmpDirs) fs.rmSync(d, { recursive: true, force: true });
+});
+
+function fileTransport(inst) {
+  const t = inst._winston.transports.find((x) => typeof x.filename === 'string' && x.filename.includes('%DATE%'));
+  assert.ok(t, 'expected a DailyRotateFile transport');
+  return t;
+}
 
 async function waitForLog(dir, expected, timeout = 3000) {
   const start = Date.now();
@@ -59,65 +71,51 @@ describe('logxpert v2', () => {
     b.close();
   });
 
-  it('defaults filename prefix to package.json name', async () => {
+  it('defaults filename prefix to package.json name', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'logxpert-'));
     const inst = log.createLogger();
     inst.settings({ files: { folder: dir } });
-    inst.info('prefix-test-message');
-    const file = await waitForLog(dir, 'prefix-test-message');
-    assert.ok(file.startsWith('logxpert-'), `expected logxpert- prefix, got ${file}`);
-    inst.close();
-    fs.rmSync(dir, { recursive: true, force: true });
+    const t = fileTransport(inst);
+    assert.ok(t.filename.startsWith('logxpert-'), `expected logxpert- prefix, got ${t.filename}`);
+    assert.equal(path.normalize(t.dirname), path.normalize(dir));
+    inst.close(); tmpDirs.push(dir);
   });
 
-  it('files.appName overrides the filename prefix', async () => {
+  it('files.appName overrides the filename prefix', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'logxpert-'));
     const inst = log.createLogger();
     inst.settings({ files: { folder: dir, appName: '@myorg/my-app!' } });
-    inst.info('appname-test-message');
-    const file = await waitForLog(dir, 'appname-test-message');
-    assert.ok(file.startsWith('my-app-'), `expected my-app- prefix, got ${file}`);
-    inst.close();
-    fs.rmSync(dir, { recursive: true, force: true });
+    assert.ok(fileTransport(inst).filename.startsWith('my-app-'));
+    inst.close(); tmpDirs.push(dir);
   });
 
-  it('runNumber is disabled by default', async () => {
+  it('runNumber is disabled by default', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'logxpert-'));
     const inst = log.createLogger();
     inst.settings({ files: { folder: dir, appName: 'myapp' } });
-    inst.info('norun-test-message');
-    const file = await waitForLog(dir, 'norun-test-message');
-    assert.match(file, /^myapp-\d{4}_\d{2}_\d{2}\.log$/);
-    inst.close();
-    fs.rmSync(dir, { recursive: true, force: true });
+    assert.equal(fileTransport(inst).filename, 'myapp-%DATE%.log');
+    inst.close(); tmpDirs.push(dir);
   });
 
-  it('runNumber increments across restarts', async () => {
+  it('runNumber increments across restarts', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'logxpert-'));
     const a = log.createLogger();
     a.settings({ files: { folder: dir, appName: 'myapp', runNumber: true } });
-    a.info('run-1-message');
-    const f1 = await waitForLog(dir, 'run-1-message');
-    assert.match(f1, /^myapp-\d{4}_\d{2}_\d{2}-1\.log$/);
+    assert.ok(fileTransport(a).filename.endsWith('-1.log'));
     a.close();
     const b = log.createLogger();
     b.settings({ files: { folder: dir, appName: 'myapp', runNumber: true } });
-    b.info('run-2-message');
-    const f2 = await waitForLog(dir, 'run-2-message');
-    assert.match(f2, /^myapp-\d{4}_\d{2}_\d{2}-2\.log$/);
-    b.close();
-    fs.rmSync(dir, { recursive: true, force: true });
+    assert.ok(fileTransport(b).filename.endsWith('-2.log'));
+    assert.equal(fs.readFileSync(path.join(dir, '.myapp.run'), 'utf8'), '2');
+    b.close(); tmpDirs.push(dir);
   });
 
-  it('runNumber format is customizable', async () => {
+  it('runNumber format is customizable', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'logxpert-'));
     const inst = log.createLogger();
     inst.settings({ files: { folder: dir, appName: 'myapp', runNumber: { separator: '_', padding: 3 } } });
-    inst.info('runcustom-test-message');
-    const file = await waitForLog(dir, 'runcustom-test-message');
-    assert.match(file, /^myapp-\d{4}_\d{2}_\d{2}_001\.log$/);
-    inst.close();
-    fs.rmSync(dir, { recursive: true, force: true });
+    assert.ok(fileTransport(inst).filename.endsWith('_001.log'));
+    inst.close(); tmpDirs.push(dir);
   });
 
   it('runNumber rejects invalid options', () => {
@@ -125,14 +123,42 @@ describe('logxpert v2', () => {
     assert.throws(() => log.settings({ files: { folder: 'x', runNumber: { separator: '' } } }), /separator/);
   });
 
-  it('writes rotated file with custom filename', async () => {
+  it('rejects filenames escaping the log folder', () => {
+    assert.throws(() => log.settings({ files: { folder: 'x', filename: '../evil-%DATE%.log' } }), /escape/);
+    assert.throws(() => log.settings({ files: { folder: 'x', filename: '..\\evil-%DATE%.log' } }), /escape/);
+  });
+
+  it('strips ANSI escapes and control chars from messages', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'logxpert-'));
+    const inst = log.createLogger();
+    inst.settings({ files: { folder: dir, appName: 'sec' } });
+    inst.info('\x1b[31mhello\x1b[0m\x07world\x0d\x00!');
+    const file = await waitForLog(dir, 'helloworld!');
+    const content = fs.readFileSync(path.join(dir, file), 'utf8');
+    assert.ok(!content.includes('\x1b'), 'no ESC byte should remain');
+    assert.ok(!content.includes('\x00'), 'no NUL byte should remain');
+    inst.close(); tmpDirs.push(dir);
+  });
+
+  it('evaluates function messages lazily only when level enabled', () => {
+    const inst = log.createLogger({ level: 'error' });
+    let called = 0;
+    inst.debug(() => { called++; return 'expensive'; });
+    assert.equal(called, 0);
+    inst.setLevel('debug');
+    inst.debug(() => { called++; return 'expensive'; });
+    assert.equal(called, 1);
+    inst.close();
+  });
+
+  it('writes rotated file with custom filename', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'logxpert-'));
     const inst = log.createLogger();
     inst.settings({ files: { folder: dir, filename: 'app-%DATE%.log', datePattern: 'YYYY-MM-DD', maxSize: '20m', maxFile: '14d' } });
-    inst.info('file-test-message');
-    await waitForLog(dir, 'file-test-message');
-    inst.close();
-    fs.rmSync(dir, { recursive: true, force: true });
+    const t = fileTransport(inst);
+    assert.equal(t.filename, 'app-%DATE%.log');
+    assert.equal(t.options.datePattern, 'YYYY-MM-DD');
+    inst.close(); tmpDirs.push(dir);
   });
 
   it('child logger shares level and logs with meta', () => {

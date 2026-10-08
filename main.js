@@ -7,18 +7,30 @@ require('winston-daily-rotate-file');
 const VALID_LEVELS = ['error', 'warn', 'info', 'http', 'verbose', 'debug', 'silly'];
 const DEFAULT_CONSOLE_FORMAT = 'YYYY-MM-DD HH:mm:ss';
 
+function pad2(n) {
+  return String(n).padStart(2, '0');
+}
+
+function formatDefaultTimestamp(d = new Date()) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+}
+
+function compileTimestampFormatter(fmt) {
+  if (typeof fmt !== 'string' || !fmt) return formatDefaultTimestamp;
+  if (fmt === DEFAULT_CONSOLE_FORMAT) return formatDefaultTimestamp;
+  if (!fmt.includes('[') || !fmt.includes(']')) return () => dayjs().format(fmt);
+  const parts = fmt.split(/(\[[^\]]*\])/).map((part) => {
+    if (part.startsWith('[') && part.endsWith(']')) {
+      const inner = part.slice(1, -1);
+      return inner ? () => '[' + dayjs().format(inner) + ']' : () => '[]';
+    }
+    return () => part;
+  });
+  return () => parts.map((f) => f()).join('');
+}
+
 function formatCustomTimestamp(fmt) {
-  if (typeof fmt !== 'string' || !fmt) return dayjs().format(DEFAULT_CONSOLE_FORMAT);
-  if (fmt.includes('[') && fmt.includes(']')) {
-    return fmt.split(/(\[[^\]]*\])/).map((part) => {
-      if (part.startsWith('[') && part.endsWith(']')) {
-        const inner = part.slice(1, -1);
-        return '[' + (inner ? dayjs().format(inner) : '') + ']';
-      }
-      return part;
-    }).join('');
-  }
-  return dayjs().format(fmt);
+  return compileTimestampFormatter(fmt)();
 }
 
 function formatExtra(meta) {
@@ -42,6 +54,23 @@ const prettyFormat = format.printf(({ timestamp, level, message, ...meta }) => {
 
 function assertLevel(level) {
   if (!VALID_LEVELS.includes(level)) throw new Error(`Invalid log level "${level}". Use one of: ${VALID_LEVELS.join(', ')}`);
+}
+
+const ANSI_RE = /\x1b\][^\x07]*(?:\x07|\x1b\\)|\x1b\[[0-9;?]*[a-zA-Z]|\x1b[()][0-9A-B]|\x1b[^[]/g;
+const CONTROL_RE = /[\x00-\x08\x0b\x0c\x0d\x0e-\x1f\x7f]/g;
+
+function sanitizeMessage(msg) {
+  if (typeof msg !== 'string') return msg;
+  return msg.replace(ANSI_RE, '').replace(CONTROL_RE, '');
+}
+
+function assertFilenameSafe(filename) {
+  if (typeof filename !== 'string' || !filename.trim() || filename.includes('\0')) {
+    throw new Error('files.filename must be a non-empty string');
+  }
+  if (path.isAbsolute(filename) || filename.split(/[\\/]/).includes('..')) {
+    throw new Error('files.filename must not escape the log folder (.. and absolute paths are rejected)');
+  }
 }
 
 function sanitizeAppName(name) {
@@ -113,14 +142,13 @@ function normalizeFilesOptions(files = {}) {
     throw new Error('files.filesName/datePattern must be a non-empty string');
   }
   let filename = files.filename ?? `${sanitizeAppName(files.appName) ?? getDefaultAppName()}-%DATE%.log`;
-  if (typeof filename !== 'string' || !filename.trim()) {
-    throw new Error('files.filename must be a non-empty string');
-  }
+  assertFilenameSafe(filename);
   if (!filename.includes('%DATE%')) {
     const ext = path.extname(filename) || '.log';
     const base = path.basename(filename, ext);
     filename = `${base}-%DATE%${ext}`;
   }
+  assertFilenameSafe(filename);
   if (!fs.existsSync(folder)) fs.mkdirSync(folder, { recursive: true });
   const prefix = path.basename(filename).split('%DATE%')[0].replace(/[-_.]+$/, '') || 'application';
   const runSuffix = resolveRunNumber(folder, sanitizeAppName(prefix) ?? 'application', files.runNumber ?? false);
@@ -144,7 +172,8 @@ function buildConsoleTransport({ enableTimestamp = true, timestampFormat = DEFAU
   const parts = [];
   if (colorize) parts.push(format.colorize());
   if (enableTimestamp) {
-    parts.push(format.timestamp({ format: () => `${timestampPrefix}${formatCustomTimestamp(timestampFormat)}${timestampSuffix}` }));
+    const stamp = compileTimestampFormatter(timestampFormat);
+    parts.push(format.timestamp({ format: () => `${timestampPrefix}${stamp()}${timestampSuffix}` }));
   } else {
     parts.push(format((info) => { delete info.timestamp; return info; })());
   }
@@ -205,12 +234,22 @@ function createLoggerInstance(initial = {}) {
     }
   }
 
+  function isEnabled(level) {
+    const want = logger.levels[level];
+    const current = logger.levels[logger.level];
+    return want !== undefined && current !== undefined && want <= current;
+  }
+
   function write(level, message, ...meta) {
+    if (typeof message === 'function') {
+      if (!isEnabled(level)) return;
+      message = message();
+    }
     if (message instanceof Error) {
-      logger.log(level, message.message, { stack: message.stack, ...meta[0] });
+      logger.log(level, sanitizeMessage(message.message), { stack: message.stack, ...meta[0] });
       return;
     }
-    logger.log(level, message, ...meta);
+    logger.log(level, sanitizeMessage(message), ...meta);
   }
 
   function callable(message, ...meta) {

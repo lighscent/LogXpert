@@ -132,6 +132,31 @@ describe('console output', () => {
     assert.ok(out.includes('back-again'));
   });
 
+  it('sanitize can be disabled to pass messages through untouched', () => {
+    const raw = '\x1b[31mred\x1b[0m\r\nkeep-me';
+    const strict = log.createLogger({ console: { colorize: false } });
+    const outStrict = captureOutput(() => {
+      strict.info(raw);
+    });
+    strict.close();
+    assert.ok(!outStrict.includes('\x1b'), 'no escape bytes when sanitizing');
+    assert.ok(!outStrict.includes('\r'), 'no carriage returns when sanitizing');
+    assert.ok(outStrict.includes('red') && outStrict.includes('keep-me'));
+    const loose = log.createLogger({ sanitize: false, console: { colorize: false } });
+    const outLoose = captureOutput(() => {
+      loose.info(raw);
+    });
+    assert.ok(outLoose.includes(raw));
+    loose.close();
+    assert.ok(outLoose.includes(raw));
+    loose.settings({ sanitize: true });
+    const outBack = captureOutput(() => {
+      loose.info(raw);
+    });
+    assert.ok(!outBack.includes('\x1b['));
+    assert.throws(() => loose.settings({ sanitize: 'yes' }), /must be a boolean/);
+  });
+
   it('evaluates function messages lazily only when level enabled', () => {
     const inst = testLogger({ level: 'error' });
     let called = 0;

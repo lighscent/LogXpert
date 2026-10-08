@@ -49,6 +49,7 @@ declare namespace log {
     console?: ConsoleOptions | false;
     files?: FilesOptions;
     level?: LogLevel;
+    sanitize?: boolean;
   }
 
   export interface ChildLogger {

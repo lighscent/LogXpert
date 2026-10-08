@@ -87,6 +87,7 @@ const child = log.child({ service: 'api' }); // bound context
 ```js
 log.settings({
   level: 'debug', // or process.env.LOG_LEVEL
+  sanitize: true, // strip ANSI escapes and control chars; false = pass through untouched
   console: {
     enableTimestamp: true,
     timestampFormat: 'YYYY-MM-DD HH:mm:ss',

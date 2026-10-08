@@ -51,11 +51,16 @@ function createLoggerInstance(initial = {}) {
   let fileTransport = null;
   let consoleOpts = { ...normalizeConsoleOpts(initial.console) };
   let filesOpts = null;
+  let sanitizeEnabled = initial.sanitize ?? true;
 
   function applySettings(options = {}) {
     if (options.level !== undefined) {
       assertLevel(options.level);
       logger.level = options.level;
+    }
+    if (options.sanitize !== undefined) {
+      if (typeof options.sanitize !== 'boolean') throw new Error('log.settings sanitize must be a boolean');
+      sanitizeEnabled = options.sanitize;
     }
     if (options.console !== undefined) {
       const next = normalizeConsoleOpts(options.console);
@@ -88,10 +93,11 @@ function createLoggerInstance(initial = {}) {
       message = message();
     }
     if (message instanceof Error) {
-      logger.log(level, sanitizeMessage(message.message), { stack: message.stack, ...meta[0] });
+      const text = sanitizeEnabled ? sanitizeMessage(message.message) : message.message;
+      logger.log(level, text, { stack: message.stack, ...meta[0] });
       return;
     }
-    logger.log(level, sanitizeMessage(message), ...meta);
+    logger.log(level, sanitizeEnabled ? sanitizeMessage(message) : message, ...meta);
   }
 
   function callable(message, ...meta) {
@@ -127,7 +133,9 @@ function createLoggerInstance(initial = {}) {
   callable._winston = logger;
 
   if (initial.files) applySettings({ files: initial.files });
-  if (initial.console || initial.level) applySettings({ console: initial.console, level: initial.level });
+  if (initial.console || initial.level || initial.sanitize !== undefined) {
+    applySettings({ console: initial.console, level: initial.level, sanitize: initial.sanitize });
+  }
 
   return callable;
 }

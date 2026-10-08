@@ -127,6 +127,18 @@ describe('file logging', () => {
     inst.close();
   });
 
+  it('strips spinner and cursor sequences from messages', async () => {
+    const dir = makeTmpDir();
+    const inst = testLogger();
+    inst.settings({ files: { folder: dir, appName: 'spin' } });
+    inst.info('⠙\x1b[1G\x1b[0Kloading\x9b2Kdone\x1b]0;title\x07end\x9dosc\x9c!');
+    const file = await waitForLog(dir, 'loading');
+    const content = fs.readFileSync(path.join(dir, file), 'utf8');
+    assert.ok(content.includes('⠙loadingdoneend!'), `spinner junk should be gone, got: ${content}`);
+    assert.ok(!content.includes('\x1b') && !content.includes('\x9b') && !content.includes('\x9d'));
+    inst.close();
+  });
+
   it('file lines carry ISO timestamps', async () => {
     const dir = makeTmpDir();
     const inst = testLogger();

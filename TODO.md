@@ -1,3 +1,0 @@
-- Add color customisation for levels
-- replace dependecies with custom libs
-- reduce main.js file size

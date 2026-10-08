@@ -93,7 +93,8 @@ log.settings({
     timestampPrefix: '',
     timestampSuffix: '',
     colorize: true,
-    colors: { info: 'blue', warn: 208, error: false }
+    colors: { info: 'blue', warn: 208, error: false },
+    // stderrLevels: ['error', 'warn'], [] = all to stdout; 'all' = all to stderr (Pterodactyl panels)
     // enabled: false, // file-only logging: silence the console
   },
   files: {
@@ -112,6 +113,8 @@ log.settings({
 Legacy aliases: `appName` (= `prefix`), `filename`/`pattern` (= `filePattern`), `filesName`/`dateFormat` (= `datePattern`).
 
 Security: messages are stripped of ANSI escapes and control characters (except `\n`, `\t`); file patterns escaping the log folder (`..`, absolute paths) are rejected.
+
+See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for known gotchas (e.g. Pterodactyl console) and [NODE_SUPPORT.md](NODE_SUPPORT.md) for the Node.js support policy.
 
 ## License
 

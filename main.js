@@ -4,7 +4,7 @@ const { MiniLogger, ConsoleTransport, NullTransport, colorizeLevel, resolveLevel
 const { FileTransport } = require('./lib/rotate');
 const { DEFAULT_CONSOLE_FORMAT, compileTimestampFormatter } = require('./lib/time');
 const { buildLine } = require('./lib/format');
-const { assertLevel, sanitizeMessage } = require('./lib/sanitize');
+const { assertLevel, sanitizeMessage, VALID_LEVELS } = require('./lib/sanitize');
 const { normalizeFilesOptions } = require('./lib/files');
 
 function normalizeConsoleOpts(input) {
@@ -12,8 +12,16 @@ function normalizeConsoleOpts(input) {
   return input || {};
 }
 
-function buildConsoleTransport({ enabled = true, enableTimestamp = true, timestampFormat = DEFAULT_CONSOLE_FORMAT, timestampPrefix = '', timestampSuffix = '', colorize = true, colors, level } = {}) {
+function buildConsoleTransport({ enabled = true, enableTimestamp = true, timestampFormat = DEFAULT_CONSOLE_FORMAT, timestampPrefix = '', timestampSuffix = '', colorize = true, colors, stderrLevels, level } = {}) {
   if (!enabled) return new NullTransport();
+  if (stderrLevels !== undefined) {
+    if (stderrLevels === 'all') {
+      stderrLevels = [...VALID_LEVELS];
+    } else {
+      if (!Array.isArray(stderrLevels)) throw new Error('console.stderrLevels must be an array of level names or "all"');
+      for (const l of stderrLevels) assertLevel(l);
+    }
+  }
   const stamp = enableTimestamp ? compileTimestampFormatter(timestampFormat) : null;
   const palette = resolveLevelColors(colors);
   const render = ({ level, message, meta }) => {
@@ -21,7 +29,7 @@ function buildConsoleTransport({ enabled = true, enableTimestamp = true, timesta
     const tag = colorize ? colorizeLevel(level, `[${level}]`, palette) : `[${level}]`;
     return buildLine(timestamp, level, message, meta, tag);
   };
-  return new ConsoleTransport({ level, render });
+  return new ConsoleTransport({ level, render, stderrLevels });
 }
 
 function buildFileTransport({ folder, datePattern, filename, maxFiles, maxSize, zippedArchive, level }) {

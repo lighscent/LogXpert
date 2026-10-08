@@ -122,6 +122,37 @@ describe('console output', () => {
     assert.equal(out2, '');
   });
 
+  it('routes streams per stderrLevels', () => {
+    const streams = { out: '', err: '' };
+    const origOut = process.stdout.write.bind(process.stdout);
+    const origErr = process.stderr.write.bind(process.stderr);
+    process.stdout.write = (c) => { streams.out += String(c); return true; };
+    process.stderr.write = (c) => { streams.err += String(c); return true; };
+    try {
+      const inst = log.createLogger();
+      inst.info('to-stdout');
+      inst.warn('to-stderr');
+      inst.close();
+      const allOut = log.createLogger({ console: { stderrLevels: [] } });
+      allOut.error('also-stdout');
+      allOut.close();
+      const allErr = log.createLogger({ console: { stderrLevels: 'all' } });
+      allErr.info('all-to-stderr');
+      allErr.close();
+    } finally {
+      process.stdout.write = origOut;
+      process.stderr.write = origErr;
+    }
+    assert.ok(streams.out.includes('to-stdout'));
+    assert.ok(!streams.out.includes('to-stderr'));
+    assert.ok(streams.err.includes('to-stderr'));
+    assert.ok(streams.out.includes('also-stdout'));
+    assert.ok(streams.err.includes('all-to-stderr'));
+    assert.ok(!streams.out.includes('all-to-stderr'));
+    assert.throws(() => log.createLogger({ console: { stderrLevels: 'error' } }), /must be an array/);
+    assert.throws(() => log.createLogger({ console: { stderrLevels: ['nope'] } }), /Invalid log level/);
+  });
+
   it('console can be re-enabled after being disabled', () => {
     const inst = testLogger();
     inst.settings({ console: { enabled: true } });

@@ -11,6 +11,7 @@ declare namespace log {
     timestampSuffix?: string;
     colorize?: boolean;
     colors?: Partial<Record<LogLevel, LevelColor>>;
+    stderrLevels?: LogLevel[] | 'all';
     level?: LogLevel;
   }
 

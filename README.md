@@ -1,5 +1,11 @@
 # LogXpert
 
+[![npm version](https://img.shields.io/npm/v/logxpert)](https://www.npmjs.com/package/logxpert)
+[![npm downloads](https://img.shields.io/npm/dm/logxpert)](https://www.npmjs.com/package/logxpert)
+[![CI](https://github.com/lighscent/LogXpert/actions/workflows/ci.yml/badge.svg)](https://github.com/lighscent/LogXpert/actions)
+[![license](https://img.shields.io/github/license/lighscent/LogXpert)](LICENSE)
+[![node](https://img.shields.io/badge/node-%3E%3D18-43853d)](NODE_SUPPORT.md)
+
 Colorful console logging for Node.js with optional daily file rotation.
 
 - Zero heavy dependencies — built-in engine.
@@ -117,3 +123,9 @@ Security: messages are stripped of ANSI escapes and control characters (except `
 ## License
 
 Apache-2.0. See [LICENSE](LICENSE).
+
+## Download stats
+
+[![npm downloads](assets/npm-downloads.svg)](https://www.npmjs.com/package/logxpert)
+
+Snapshot of daily downloads over the last 7 days (updated daily by automation).

@@ -1,0 +1,33 @@
+name: Downloads graph
+on:
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  graph:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Regenerate downloads graph
+        run: node scripts/downloads-graph.js
+
+      - name: Commit if changed
+        run: |
+          if git diff --quiet -- assets/npm-downloads.svg; then
+            echo "Graph inchange, skip."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add assets/npm-downloads.svg
+            git commit -m "chore: update npm downloads graph"
+            git push
+          fi

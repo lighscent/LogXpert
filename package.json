@@ -25,7 +25,8 @@
     "lib/",
     "README.md",
     "LICENSE",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "assets/"
   ],
   "repository": {
     "type": "git",

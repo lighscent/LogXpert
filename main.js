@@ -3,7 +3,7 @@ const path = require('path');
 const { MiniLogger, ConsoleTransport, NullTransport, colorizeLevel, resolveLevelColors } = require('./lib/mini');
 const { FileTransport } = require('./lib/rotate');
 const { DEFAULT_CONSOLE_FORMAT, compileTimestampFormatter } = require('./lib/time');
-const { buildLine } = require('./lib/format');
+const { buildLine, buildJsonLine } = require('./lib/format');
 const { assertLevel } = require('./lib/sanitize');
 const { normalizeFilesOptions } = require('./lib/files');
 const { normalizeInput } = require('./lib/event');
@@ -14,22 +14,41 @@ function normalizeConsoleOpts(input) {
   return input || {};
 }
 
+function autoRender(textRender, jsonRender) {
+  return (entry) => (typeof entry.message === 'object' ? jsonRender(entry) : textRender(entry));
+}
+
 function buildConsoleTransport({ enabled = true, enableTimestamp = true, timestampFormat = DEFAULT_CONSOLE_FORMAT, timestampPrefix = '', timestampSuffix = '', colorize = true, colors, level } = {}) {
   if (!enabled) return new NullTransport();
   const stamp = enableTimestamp ? compileTimestampFormatter(timestampFormat) : null;
+  const timeOf = (entry) => (entry.time instanceof Date ? entry.time : new Date());
+  const jsonRender = (entry) => buildJsonLine({
+    timestamp: stamp ? `${timestampPrefix}${stamp(timeOf(entry))}${timestampSuffix}` : '',
+    level: entry.level,
+    message: entry.message,
+    meta: entry.meta,
+  });
   const palette = resolveLevelColors(colors);
-  const render = (entry) => {
+  const textRender = (entry) => {
     const { level, message, meta } = entry;
-    const time = entry.time instanceof Date ? entry.time : new Date();
-    const timestamp = stamp ? `${timestampPrefix}${stamp(time)}${timestampSuffix}` : '';
+    const timestamp = stamp ? `${timestampPrefix}${stamp(timeOf(entry))}${timestampSuffix}` : '';
     const tag = colorize ? colorizeLevel(level, `[${level}]`, palette) : `[${level}]`;
     return buildLine(timestamp, level, message, meta, tag);
   };
-  return new ConsoleTransport({ level, render });
+  return new ConsoleTransport({ level, render: autoRender(textRender, jsonRender) });
 }
 
 function buildFileTransport({ folder, datePattern, filename, maxFiles, maxSize, zippedArchive, level }) {
   if (!fs.existsSync(folder)) fs.mkdirSync(folder, { recursive: true });
+  const isoTime = (entry) => (entry.time instanceof Date ? entry.time : new Date()).toISOString();
+  const textRender = (entry) => buildLine(isoTime(entry), entry.level, entry.message, entry.meta);
+  const jsonRender = (entry) => buildJsonLine({
+    timestamp: isoTime(entry),
+    level: entry.level,
+    message: entry.message,
+    meta: entry.meta,
+  });
+  const render = autoRender(textRender, jsonRender);
   return new FileTransport({
     folder: path.normalize(folder),
     filename,
@@ -38,7 +57,7 @@ function buildFileTransport({ folder, datePattern, filename, maxFiles, maxSize, 
     maxSize,
     maxFiles,
     level,
-    render: (entry) => buildLine((entry.time instanceof Date ? entry.time : new Date()).toISOString(), entry.level, entry.message, entry.meta),
+    render,
   });
 }
 

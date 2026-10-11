@@ -7,6 +7,7 @@ const zlib = require('node:zlib');
 
 const { LEVELS, MiniLogger, ConsoleTransport } = require('../lib/mini');
 const { FileTransport, parseSize, parseDays } = require('../lib/rotate');
+const { createLogEvent, isLogEvent } = require('../lib/event');
 
 const tmpDirs = [];
 after(async () => {
@@ -23,6 +24,49 @@ function makeTmpDir() {
 function fileTransportEntry(level, message, meta = []) {
   return { level, message, meta };
 }
+
+describe('log event model', () => {
+  it('creates a normalized event with level, message, meta array and time', () => {
+    const before = Date.now();
+    const e = createLogEvent('info', 'hello', [{ a: 1 }]);
+    assert.equal(e.level, 'info');
+    assert.equal(e.message, 'hello');
+    assert.deepEqual(e.meta, [{ a: 1 }]);
+    assert.ok(e.time instanceof Date);
+    assert.ok(e.time.getTime() >= before && e.time.getTime() <= Date.now());
+  });
+
+  it('normalizes missing or single meta into an array', () => {
+    assert.deepEqual(createLogEvent('info', 'm', undefined).meta, []);
+    assert.deepEqual(createLogEvent('info', 'm').meta, []);
+    assert.deepEqual(createLogEvent('info', 'm', { a: 1 }).meta, [{ a: 1 }]);
+  });
+
+  it('isLogEvent validates the shape', () => {
+    assert.equal(isLogEvent(createLogEvent('error', 'x', [])), true);
+    assert.equal(isLogEvent({ level: 'info', message: 'x', meta: [] }), false);
+    assert.equal(isLogEvent({ level: 'info', message: 'x', meta: [], time: 'now' }), false);
+    assert.equal(isLogEvent(null), false);
+    assert.equal(isLogEvent('info'), false);
+  });
+
+  it('MiniLogger delivers LogEvents carrying creation time', () => {
+    const seen = [];
+    const logger = new MiniLogger({ level: 'debug' });
+    logger.add({ write: (e) => seen.push(e) });
+    logger.log('warn', 'hello', { a: 1 });
+    assert.equal(seen.length, 1);
+    assert.ok(isLogEvent(seen[0]));
+    assert.equal(seen[0].level, 'warn');
+    assert.deepEqual(seen[0].meta, [{ a: 1 }]);
+  });
+
+  it('compileTimestampFormatter honors a given date', () => {
+    const { compileTimestampFormatter } = require('../lib/time');
+    const d = new Date(2026, 9, 11, 12, 34, 56);
+    assert.equal(compileTimestampFormatter('YYYY-MM-DD HH:mm:ss')(d), '2026-10-11 12:34:56');
+  });
+});
 
 describe('mini logger core', () => {
   it('orders levels from error to silly', () => {

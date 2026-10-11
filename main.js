@@ -16,8 +16,10 @@ function buildConsoleTransport({ enabled = true, enableTimestamp = true, timesta
   if (!enabled) return new NullTransport();
   const stamp = enableTimestamp ? compileTimestampFormatter(timestampFormat) : null;
   const palette = resolveLevelColors(colors);
-  const render = ({ level, message, meta }) => {
-    const timestamp = stamp ? `${timestampPrefix}${stamp()}${timestampSuffix}` : '';
+  const render = (entry) => {
+    const { level, message, meta } = entry;
+    const time = entry.time instanceof Date ? entry.time : new Date();
+    const timestamp = stamp ? `${timestampPrefix}${stamp(time)}${timestampSuffix}` : '';
     const tag = colorize ? colorizeLevel(level, `[${level}]`, palette) : `[${level}]`;
     return buildLine(timestamp, level, message, meta, tag);
   };
@@ -34,7 +36,7 @@ function buildFileTransport({ folder, datePattern, filename, maxFiles, maxSize, 
     maxSize,
     maxFiles,
     level,
-    render: ({ level, message, meta }) => buildLine(new Date().toISOString(), level, message, meta),
+    render: (entry) => buildLine((entry.time instanceof Date ? entry.time : new Date()).toISOString(), entry.level, entry.message, entry.meta),
   });
 }
 

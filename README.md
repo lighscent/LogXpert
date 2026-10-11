@@ -120,12 +120,10 @@ Legacy aliases: `appName` (= `prefix`), `filename`/`pattern` (= `filePattern`), 
 
 Security: messages are stripped of ANSI escapes and control characters (except `\n`, `\t`); file patterns escaping the log folder (`..`, absolute paths) are rejected.
 
-## License
-
-Apache-2.0. See [LICENSE](LICENSE).
-
 ## Download stats
 
 [![npm downloads](assets/npm-downloads.svg)](https://www.npmjs.com/package/logxpert)
 
-Snapshot of daily downloads over the last 7 days (updated daily by automation).
+## License
+
+Apache-2.0. See [LICENSE](LICENSE).

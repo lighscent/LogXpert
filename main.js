@@ -4,8 +4,9 @@ const { MiniLogger, ConsoleTransport, NullTransport, colorizeLevel, resolveLevel
 const { FileTransport } = require('./lib/rotate');
 const { DEFAULT_CONSOLE_FORMAT, compileTimestampFormatter } = require('./lib/time');
 const { buildLine } = require('./lib/format');
-const { assertLevel, sanitizeMessage } = require('./lib/sanitize');
+const { assertLevel } = require('./lib/sanitize');
 const { normalizeFilesOptions } = require('./lib/files');
+const { normalizeInput } = require('./lib/event');
 
 function normalizeConsoleOpts(input) {
   if (input === false) return { enabled: false };
@@ -94,12 +95,8 @@ function createLoggerInstance(initial = {}) {
       if (!isEnabled(level)) return;
       message = message();
     }
-    if (message instanceof Error) {
-      const text = sanitizeEnabled ? sanitizeMessage(message.message) : message.message;
-      logger.log(level, text, { stack: message.stack, ...meta[0] });
-      return;
-    }
-    logger.log(level, sanitizeEnabled ? sanitizeMessage(message) : message, ...meta);
+    const [text, args] = normalizeInput(message, meta, { sanitize: sanitizeEnabled });
+    logger.log(level, text, ...args);
   }
 
   function callable(message, ...meta) {

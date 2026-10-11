@@ -7,7 +7,7 @@ const zlib = require('node:zlib');
 
 const { LEVELS, MiniLogger, ConsoleTransport } = require('../lib/mini');
 const { FileTransport, parseSize, parseDays } = require('../lib/rotate');
-const { createLogEvent, isLogEvent } = require('../lib/event');
+const { createLogEvent, isLogEvent, normalizeInput } = require('../lib/event');
 
 const tmpDirs = [];
 after(async () => {
@@ -59,6 +59,24 @@ describe('log event model', () => {
     assert.ok(isLogEvent(seen[0]));
     assert.equal(seen[0].level, 'warn');
     assert.deepEqual(seen[0].meta, [{ a: 1 }]);
+  });
+
+  it('normalizeInput maps Error to message plus stack meta', () => {
+    const err = new Error('boom');
+    const [text, args] = normalizeInput(err, [{ requestId: 'abc' }], { sanitize: true });
+    assert.equal(text, 'boom');
+    assert.deepEqual(args, [{ stack: err.stack, requestId: 'abc' }]);
+  });
+
+  it('normalizeInput honors the sanitize opt-out', () => {
+    const [text] = normalizeInput('\x1b[31mred\x1b[0m', [], { sanitize: false });
+    assert.equal(text, '\x1b[31mred\x1b[0m');
+  });
+
+  it('normalizeInput passes plain messages and meta through', () => {
+    const [text, args] = normalizeInput('hello', [{ a: 1 }], { sanitize: true });
+    assert.equal(text, 'hello');
+    assert.deepEqual(args, [{ a: 1 }]);
   });
 
   it('compileTimestampFormatter honors a given date', () => {

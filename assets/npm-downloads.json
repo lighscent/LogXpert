@@ -1,0 +1,154 @@
+{
+  "package": "logxpert",
+  "updated": "2026-10-11",
+  "window": "last 14 complete days (today excluded, npm has no current-day stats)",
+  "totalDownloads": 830,
+  "daily": [
+    {
+      "day": "2026-09-27",
+      "downloads": 0
+    },
+    {
+      "day": "2026-09-28",
+      "downloads": 0
+    },
+    {
+      "day": "2026-09-29",
+      "downloads": 0
+    },
+    {
+      "day": "2026-09-30",
+      "downloads": 1
+    },
+    {
+      "day": "2026-10-01",
+      "downloads": 0
+    },
+    {
+      "day": "2026-10-02",
+      "downloads": 1
+    },
+    {
+      "day": "2026-10-03",
+      "downloads": 0
+    },
+    {
+      "day": "2026-10-04",
+      "downloads": 0
+    },
+    {
+      "day": "2026-10-05",
+      "downloads": 0
+    },
+    {
+      "day": "2026-10-06",
+      "downloads": 0
+    },
+    {
+      "day": "2026-10-07",
+      "downloads": 176
+    },
+    {
+      "day": "2026-10-08",
+      "downloads": 556
+    },
+    {
+      "day": "2026-10-09",
+      "downloads": 49
+    },
+    {
+      "day": "2026-10-10",
+      "downloads": 47
+    }
+  ],
+  "versionCoverage": "last 7 days (npm versions API is last-week only)",
+  "topVersions": [
+    {
+      "version": "2.1.0",
+      "downloads": 188
+    },
+    {
+      "version": "2.0.0",
+      "downloads": 174
+    },
+    {
+      "version": "2.1.2",
+      "downloads": 153
+    },
+    {
+      "version": "2.0.3",
+      "downloads": 151
+    },
+    {
+      "version": "2.1.1",
+      "downloads": 97
+    },
+    {
+      "version": "1.0.5",
+      "downloads": 28
+    },
+    {
+      "version": "1.0.4-0",
+      "downloads": 6
+    },
+    {
+      "version": "1.0.2",
+      "downloads": 5
+    },
+    {
+      "version": "1.0.3",
+      "downloads": 5
+    },
+    {
+      "version": "1.0.0",
+      "downloads": 4
+    },
+    {
+      "version": "0.1.0",
+      "downloads": 3
+    },
+    {
+      "version": "0.2.0",
+      "downloads": 3
+    },
+    {
+      "version": "0.3.1",
+      "downloads": 3
+    },
+    {
+      "version": "0.3.2",
+      "downloads": 3
+    },
+    {
+      "version": "1.0.1",
+      "downloads": 3
+    },
+    {
+      "version": "0.3.0",
+      "downloads": 2
+    }
+  ],
+  "snapshots": [
+    {
+      "day": "2026-10-11",
+      "versions": {
+        "2.1.2": 153,
+        "1.0.0": 4,
+        "0.3.0": 2,
+        "1.0.3": 5,
+        "1.0.5": 28,
+        "2.1.0": 188,
+        "0.1.0": 3,
+        "1.0.1": 3,
+        "1.0.4-0": 6,
+        "2.0.0": 174,
+        "2.0.3": 151,
+        "2.1.1": 97,
+        "0.3.1": 3,
+        "0.3.2": 3,
+        "0.2.0": 3,
+        "1.0.2": 5
+      }
+    }
+  ]
+}

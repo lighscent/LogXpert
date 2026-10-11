@@ -6,7 +6,9 @@ const path = require('path');
 
 const DAYS = 7;
 const TOP_N = 5;
+const JSON_DAYS = 14;
 const OUT = path.join(__dirname, '..', 'assets', 'npm-downloads.svg');
+const JSON_OUT = path.join(__dirname, '..', 'assets', 'npm-downloads.json');
 
 function isoDaysAgo(n) {
   const d = new Date();
@@ -25,20 +27,32 @@ function esc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 }
 
+function niceCeil(m) {
+  if (m <= 0) return 1;
+  const mag = 10 ** Math.floor(Math.log10(m));
+  for (const mult of [1, 1.5, 2, 3, 4, 5, 6, 8, 10]) {
+    if (mult * mag >= m) return mult * mag;
+  }
+  return 10 * mag;
+}
+
+const fmtTick = (v) => String(Math.round(v * 10) / 10);
+
 function render(days, top) {
   const W = 880, H = 240;
   const PAD_L = 46, PAD_R = 14, PAD_T = 44, PAD_B = 30;
   const DIV_X = 640;
   const plotW = DIV_X - PAD_L - 16, plotH = H - PAD_T - PAD_B;
   const max = Math.max(...days.map((d) => d.total), 1);
+  const top_tick = niceCeil(max);
   const grand = days.reduce((s, d) => s + d.total, 0);
   const slot = plotW / days.length;
   const barW = Math.round(slot * 0.52);
-  const yFor = (v) => PAD_T + plotH - Math.round((v / max) * plotH);
+  const yFor = (v) => PAD_T + plotH - Math.round((v / top_tick) * plotH);
 
   let bars = '';
   days.forEach((d, i) => {
-    const h = Math.round((d.total / max) * plotH);
+    const h = Math.round((d.total / top_tick) * plotH);
     const x = Math.round(PAD_L + i * slot + (slot - barW) / 2);
     const y = PAD_T + plotH - h;
     const peak = d.total === max && max > 0;
@@ -51,10 +65,10 @@ function render(days, top) {
   });
 
   let grid = '';
-  for (const v of [0, Math.round(max / 2), max]) {
+  for (const v of [0, top_tick / 3, (2 * top_tick) / 3, top_tick]) {
     const y = yFor(v);
     grid += `<line x1="${PAD_L}" y1="${y}" x2="${DIV_X - 16}" y2="${y}" stroke="#30363d" stroke-width="1"/>` +
-      `<text x="${PAD_L - 7}" y="${y + 4}" text-anchor="end" font-size="10" fill="#8b949e" font-family="sans-serif">${v}</text>`;
+      `<text x="${PAD_L - 7}" y="${y + 4}" text-anchor="end" font-size="10" fill="#8b949e" font-family="sans-serif">${fmtTick(v)}</text>`;
   }
 
   let panel = `<line x1="${DIV_X}" y1="${PAD_T}" x2="${DIV_X}" y2="${H - PAD_B}" stroke="#30363d" stroke-width="1"/>` +
@@ -77,7 +91,7 @@ function render(days, top) {
     `<linearGradient id="peak" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4ade80"/><stop offset="1" stop-color="#16a34a"/></linearGradient>` +
     `</defs>` +
     `<rect width="${W}" height="${H}" rx="8" fill="#0d1117"/>` +
-    `<text x="${PAD_L}" y="20" font-size="13" fill="#e6edf3" font-family="sans-serif" font-weight="bold">npm downloads / day — last ${DAYS} days, excl. today · total ${grand}</text>` +
+    `<text x="${PAD_L}" y="20" font-size="13" fill="#e6edf3" font-family="sans-serif" font-weight="bold">npm downloads / day — last ${DAYS} days · total ${grand}</text>` +
     `<text x="${PAD_L}" y="34" font-size="10" fill="#8b949e" font-family="sans-serif">updated ${isoDaysAgo(0)}</text>` +
     grid + bars + panel + `</svg>`;
 }
@@ -112,6 +126,64 @@ async function main() {
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, render(days, top));
   console.log(`wrote ${OUT} (total ${days.reduce((s, d) => s + d.total, 0)}, versions ${top.length})`);
+  await writeStatsJson();
+}
+
+// Stores the raw 14-day stats as JSON. Exact per-version totals over 14 days
+// don't exist in the npm API (versions endpoint is last-week only), so the
+// JSON holds exact 14-day daily totals + the last-week per-version breakdown,
+// plus one last-week snapshot per daily run for version trend history.
+async function writeStatsJson() {
+  const end = isoDaysAgo(1);
+  const start = isoDaysAgo(JSON_DAYS);
+  const range = await fetchJson(`https://api.npmjs.org/downloads/range/${start}:${end}/logxpert`);
+  const byDay = new Map((range.downloads || []).map((d) => [d.day, d.downloads]));
+  const daily = [];
+  for (let d = JSON_DAYS; d >= 1; d--) {
+    const day = isoDaysAgo(d);
+    daily.push({ day, downloads: byDay.get(day) || 0 });
+  }
+
+  let snapshots = [];
+  try {
+    const prev = JSON.parse(fs.readFileSync(JSON_OUT, 'utf8'));
+    if (Array.isArray(prev.snapshots)) snapshots = prev.snapshots;
+  } catch { /* first run: no history yet */ }
+  let weekVersions = null;
+  if (process.argv[4]) {
+    weekVersions = JSON.parse(fs.readFileSync(process.argv[4], 'utf8'));
+  } else {
+    try {
+      weekVersions = await fetchJson('https://api.npmjs.org/versions/logxpert/last-week');
+    } catch (err) {
+      console.error(`versions last-week failed, keeping previous snapshots: ${err.message || err}`);
+    }
+  }
+  const versions = (weekVersions && weekVersions.downloads) || weekVersions || {};
+  const today = isoDaysAgo(0);
+  if (Object.keys(versions).length > 0) {
+    snapshots = snapshots.filter((s) => s.day !== today);
+    snapshots.push({ day: today, versions });
+  }
+  snapshots = snapshots.slice(-JSON_DAYS);
+
+  const topVersions = Object.entries(versions)
+    .map(([version, downloads]) => ({ version, downloads }))
+    .sort((a, b) => b.downloads - a.downloads || (a.version < b.version ? -1 : 1));
+
+  const stats = {
+    package: 'logxpert',
+    updated: today,
+    window: `last ${JSON_DAYS} complete days (today excluded, npm has no current-day stats)`,
+    totalDownloads: daily.reduce((s, d) => s + d.downloads, 0),
+    daily,
+    versionCoverage: 'last 7 days (npm versions API is last-week only)',
+    topVersions,
+    snapshots,
+  };
+  fs.mkdirSync(path.dirname(JSON_OUT), { recursive: true });
+  fs.writeFileSync(JSON_OUT, JSON.stringify(stats, null, 2) + '\n');
+  console.log(`wrote ${JSON_OUT} (total ${stats.totalDownloads}, snapshots ${snapshots.length})`);
 }
 
 main().catch((err) => { console.error(err.message || err); process.exit(1); });

@@ -14,7 +14,8 @@ LogXpert/
 │   ├── time.js                   # Timestamps (precompiled)
 │   ├── format.js                 # Log line formatting
 │   ├── sanitize.js               # Sanitization (ANSI stripping, traversal guard)
-│   └── event.js                  # Event normalization (normalizeInput: Error/sanitize) + LogEvent factory
+│   ├── event.js                  # Event normalization (normalizeInput: Error/sanitize) + LogEvent factory
+│   └── context.js                # Context enrichment (withContext: child loggers)
 │
 ├── test/                         # Tests (node --test, explicit files)
 │   ├── logger.test.js            # Facade / public API

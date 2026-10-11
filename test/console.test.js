@@ -185,6 +185,19 @@ describe('console output', () => {
     assert.ok(out.includes('payments'));
   });
 
+  it('child exposes the full level surface and normalizes input', () => {
+    const inst = log.createLogger();
+    const c = inst.child({ service: 'api' });
+    for (const m of ['error', 'warn', 'info', 'debug', 'http', 'verbose', 'silly', 'log']) {
+      assert.equal(typeof c[m], 'function', `child.${m} is a function`);
+    }
+    const out = captureOutput(() => {
+      c.info(new Error('boom'));
+    });
+    inst.close();
+    assert.ok(out.includes('boom'));
+  });
+
   it('error with extra meta keeps stack and fields', () => {
     const inst = log.createLogger();
     const out = captureOutput(() => {

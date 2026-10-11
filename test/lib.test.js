@@ -8,6 +8,7 @@ const zlib = require('node:zlib');
 const { LEVELS, MiniLogger, ConsoleTransport } = require('../lib/mini');
 const { FileTransport, parseSize, parseDays } = require('../lib/rotate');
 const { createLogEvent, isLogEvent, normalizeInput } = require('../lib/event');
+const { withContext } = require('../lib/context');
 
 const tmpDirs = [];
 after(async () => {
@@ -143,6 +144,19 @@ describe('mini logger core', () => {
     assert.equal(seen.length, 1);
     assert.equal(seen[0].message, 'msg');
     assert.deepEqual(seen[0].meta, [{ service: 'api' }, { extra: 1 }]);
+  });
+
+  it('withContext() builds a child over any emit function', () => {
+    const calls = [];
+    const child = withContext((level, m, ...a) => calls.push([level, m, ...a]), { req: 1 }, ['info', 'http']);
+    child.info('a', { x: 1 });
+    child.http('b');
+    child.log('info', 'c');
+    assert.deepEqual(calls, [
+      ['info', 'a', { req: 1 }, { x: 1 }],
+      ['http', 'b', { req: 1 }],
+      ['info', 'c', { req: 1 }],
+    ]);
   });
 
   it('console transport sends error/warn to stderr', () => {

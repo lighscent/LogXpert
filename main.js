@@ -7,6 +7,7 @@ const { buildLine } = require('./lib/format');
 const { assertLevel } = require('./lib/sanitize');
 const { normalizeFilesOptions } = require('./lib/files');
 const { normalizeInput } = require('./lib/event');
+const { withContext } = require('./lib/context');
 
 function normalizeConsoleOpts(input) {
   if (input === false) return { enabled: false };
@@ -115,16 +116,11 @@ function createLoggerInstance(initial = {}) {
   callable.settings = applySettings;
   callable.setLevel = (level) => { assertLevel(level); logger.level = level; };
   callable.getLevel = () => logger.level;
-  callable.child = (meta = {}) => {
-    const child = logger.child(meta);
-    return {
-      error: (m, ...a) => child.error(m, ...a),
-      warn: (m, ...a) => child.warn(m, ...a),
-      info: (m, ...a) => child.info(m, ...a),
-      debug: (m, ...a) => child.debug(m, ...a),
-      log: child.log.bind(child),
-    };
-  };
+  callable.child = (meta = {}) => withContext(
+    (level, message, ...args) => { assertLevel(level); write(level, message, ...args); },
+    meta,
+    ['error', 'warn', 'info', 'debug', 'http', 'verbose', 'silly'],
+  );
   callable.close = () => {
     if (fileTransport) { logger.remove(fileTransport); try { fileTransport.close?.(); } catch {} fileTransport = null; }
   };

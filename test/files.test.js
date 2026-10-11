@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const dayjs = require('dayjs');
 
-const { resolveRunNumber } = require('../lib/files');
+const { getDefaultAppName, resolveRunNumber, normalizeFilesOptions } = require('../lib/files');
 const { log, testLogger, cleanupTmp, makeTmpDir, fileTransport, waitForLog } = require('./helpers');
 
 after(cleanupTmp);
@@ -172,6 +172,37 @@ describe('file logging', () => {
     inst.close();
   });
 
+  it('object messages are written as one JSON object per line', async () => {
+    const dir = makeTmpDir();
+    const inst = testLogger();
+    inst.settings({ files: { folder: dir, appName: 'jsf' } });
+    inst.info({ event: 'json-file-message' }, { user: 'ana' });
+    const file = await waitForLog(dir, 'json-file-message');
+    const lines = fs.readFileSync(path.join(dir, file), 'utf8').trim().split('\n');
+    assert.equal(lines.length, 1);
+    const obj = JSON.parse(lines[0]);
+    assert.equal(obj.level, 'info');
+    assert.deepEqual(obj.message, { event: 'json-file-message' });
+    assert.deepEqual(obj.meta, [{ user: 'ana' }]);
+    assert.match(obj.timestamp, /^\d{4}-\d{2}-\d{2}T/);
+    inst.close();
+  });
+
+  it('string file messages keep the historical text rendering', async () => {
+    const dir = makeTmpDir();
+    const inst = testLogger();
+    inst.settings({ files: { folder: dir, appName: 'jsa' } });
+    inst.info({ event: 'auto-file-marker' });
+    inst.info('auto-text-marker');
+    const file = await waitForLog(dir, 'auto-text-marker');
+    const content = fs.readFileSync(path.join(dir, file), 'utf8');
+    const lines = content.trim().split('\n');
+    assert.equal(lines.length, 2);
+    assert.deepEqual(JSON.parse(lines[0]).message, { event: 'auto-file-marker' });
+    assert.ok(lines[1].includes('auto-text-marker') && lines[1].includes('[info]'));
+    inst.close();
+  });
+
   it('rotates files across a real date boundary', async () => {
     const dir = makeTmpDir();
     const inst = testLogger();
@@ -240,5 +271,45 @@ describe('file logging', () => {
     inst.info('flush-me');
     inst.close();
     await waitForLog(dir, 'flush-me');
+  });
+
+  it('stamps %DATE% when the pattern has no date placeholder', () => {
+    const dir = makeTmpDir();
+    const opts = normalizeFilesOptions({ folder: dir, filePattern: 'plain.log' });
+    assert.equal(opts.filename, 'plain-%DATE%.log');
+  });
+
+  it('falls back to application without a package.json', () => {
+    const sandbox = makeTmpDir();
+    const cwd = process.cwd();
+    const key = require.resolve('../lib/files');
+    const cached = require.cache[key];
+    delete require.cache[key];
+    process.chdir(sandbox);
+    try {
+      const fresh = require('../lib/files');
+      assert.equal(fresh.getDefaultAppName(), 'application');
+      const opts = fresh.normalizeFilesOptions({ folder: 'sub' });
+      assert.equal(opts.filename, 'application-%DATE%.log');
+    } finally {
+      process.chdir(cwd);
+      if (cached) require.cache[key] = cached;
+      else delete require.cache[key];
+    }
+  });
+
+  it('defaults the file folder to logs', async () => {
+    const sandbox = makeTmpDir();
+    const cwd = process.cwd();
+    process.chdir(sandbox);
+    try {
+      const inst = log.createLogger({ console: { enabled: false }, files: { appName: 'sandboxed' } });
+      inst.info('sandbox-marker');
+      const file = await waitForLog(path.join(sandbox, 'logs'), 'sandbox-marker');
+      assert.ok(file.endsWith('.log'));
+      inst.close();
+    } finally {
+      process.chdir(cwd);
+    }
   });
 });

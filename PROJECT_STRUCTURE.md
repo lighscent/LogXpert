@@ -12,16 +12,23 @@ LogXpert/
 │   ├── rotate.js                 # Daily file rotation: maxSize/maxFiles/gzip
 │   ├── files.js                  # File options normalization (prefix, filePattern, runNumber…)
 │   ├── time.js                   # Timestamps (precompiled)
-│   ├── format.js                 # Log line formatting
+│   ├── format.js                 # Log line formatting (text historical, JSON for objects — auto)
 │   ├── sanitize.js               # Sanitization (ANSI stripping, traversal guard)
 │   ├── event.js                  # Event normalization (normalizeInput: Error/sanitize) + LogEvent factory
 │   └── context.js                # Context enrichment (withContext: child loggers)
 │
 ├── test/                         # Tests (node --test, explicit files)
 │   ├── logger.test.js            # Facade / public API
-│   ├── console.test.js           # Console transport (colors, stderrLevels, silent)
+│   ├── console.test.js           # Console transport (colors, stderr routing, silent mode)
 │   ├── files.test.js             # File transport (rotation, runNumber, archives)
-│   ├── lib.test.js               # Direct lib/* modules
+│   ├── lib/                      # Unit tests, one file per lib/* module
+│   │   ├── event.test.js         # LogEvent factory + normalizeInput
+│   │   ├── context.test.js       # withContext child enrichment
+│   │   ├── format.test.js        # Line/JSON rendering
+│   │   ├── time.test.js          # Timestamps
+│   │   ├── sanitize.test.js      # ANSI/traversal/guards
+│   │   ├── mini.test.js          # MiniLogger, colors, transports
+│   │   └── rotate.test.js        # File rotation, archives
 │   ├── helpers.js                # Shared helpers (not a test file)
 │   └── reporter.js               # Custom reporter
 │

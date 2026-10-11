@@ -49,7 +49,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "test": "node --test --test-reporter=./test/reporter.js test/logger.test.js test/console.test.js test/files.test.js test/lib.test.js",
+    "test": "node --test --test-reporter=./test/reporter.js test/logger.test.js test/console.test.js test/files.test.js test/lib/event.test.js test/lib/context.test.js test/lib/format.test.js test/lib/time.test.js test/lib/sanitize.test.js test/lib/mini.test.js test/lib/rotate.test.js",
     "test:demo": "node --test --test-reporter=./test/reporter.js demo/reporter.demo.test.js",
     "check:types": "tsc -p test-d --noEmit && echo TYPES-OK",
     "attw": "attw --pack"

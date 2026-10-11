@@ -1,8 +1,7 @@
 const { describe, it, beforeEach, afterEach, after } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { log, testLogger } = require('./helpers');
-const { cleanupTmp } = require('./helpers');
+const { log, testLogger, cleanupTmp } = require('./helpers');
 
 after(cleanupTmp);
 
@@ -46,6 +45,15 @@ describe('logger api', () => {
     b.close();
   });
 
+  it('instances can spawn sub-loggers via createLogger', () => {
+    const inst = testLogger();
+    const sub = inst.createLogger({ level: 'error' });
+    assert.equal(sub.getLevel(), 'error');
+    assert.equal(inst.getLevel(), 'debug');
+    sub.close();
+    inst.close();
+  });
+
   it('close is idempotent and settings accepts empty options', () => {
     const inst = testLogger();
     inst.close();
@@ -66,5 +74,47 @@ describe('logger api', () => {
     assert.throws(() => log.settings({ files: { folder: 'x', filename: '../evil-%DATE%.log' } }), /escape/);
     assert.throws(() => log.settings({ files: { folder: 'x', filename: '..\\evil-%DATE%.log' } }), /escape/);
     assert.throws(() => log.settings({ files: { folder: 'x', filename: '/abs-%DATE%.log' } }), /escape/);
+  });
+
+  it('every level method delivers to transports', () => {
+    const inst = testLogger({ level: 'silly' });
+    const seen = [];
+    const spy = { write: (e) => seen.push(e.level) };
+    inst._winston.add(spy);
+    try {
+      for (const m of ['error', 'warn', 'info', 'http', 'verbose', 'debug', 'silly']) inst[m](`${m}-marker`);
+      inst.log('info', 'log-marker');
+    } finally {
+      inst._winston.remove(spy);
+    }
+    for (const m of ['error', 'warn', 'info', 'http', 'verbose', 'debug', 'silly']) {
+      assert.ok(seen.includes(m), `${m} should be delivered`);
+    }
+    inst.close();
+  });
+
+  it('honors the LOG_LEVEL environment variable', () => {
+    const prev = process.env.LOG_LEVEL;
+    process.env.LOG_LEVEL = 'error';
+    try {
+      const inst = testLogger();
+      assert.equal(inst.getLevel(), 'error');
+      inst.close();
+    } finally {
+      if (prev === undefined) delete process.env.LOG_LEVEL;
+      else process.env.LOG_LEVEL = prev;
+    }
+  });
+
+  it('child.log validates its level', () => {
+    const inst = testLogger();
+    assert.throws(() => inst.child({}).log('nope', 'x'), /Invalid log level/);
+    inst.close();
+  });
+
+  it('settings rejects invalid console options', () => {
+    const inst = testLogger();
+    assert.throws(() => inst.settings({ console: { level: 'nope' } }), /Invalid log level/);
+    inst.close();
   });
 });

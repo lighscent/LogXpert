@@ -25,7 +25,7 @@ function makeTmpDir() {
 
 function fileTransport(inst) {
   const t = inst._winston.transports.find((x) => typeof x.filename === 'string' && x.filename.includes('%DATE%'));
-  assert.ok(t, 'expected a DailyRotateFile transport');
+  assert.ok(t, 'expected a file transport (%DATE% template)');
   return t;
 }
 

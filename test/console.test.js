@@ -185,6 +185,36 @@ describe('console output', () => {
     assert.ok(out.includes('payments'));
   });
 
+  it('object messages are rendered as one JSON object per line', () => {
+    const inst = log.createLogger();
+    const out = captureOutput(() => {
+      inst.info({ event: 'signup' }, { req: 7 });
+    });
+    inst.close();
+    const lines = out.trim().split('\n');
+    assert.equal(lines.length, 1);
+    const obj = JSON.parse(lines[0]);
+    assert.equal(obj.level, 'info');
+    assert.deepEqual(obj.message, { event: 'signup' });
+    assert.deepEqual(obj.meta, [{ req: 7 }]);
+    assert.equal(typeof obj.timestamp, 'string');
+    assert.ok(!out.includes('\x1b'), 'json output must not be colorized');
+  });
+
+  it('string messages keep the historical text rendering', () => {
+    const inst = log.createLogger();
+    const out = captureOutput(() => {
+      inst.info({ event: 'signup', user: 3 });
+      inst.info('plain-text-message');
+    });
+    inst.close();
+    const lines = out.trim().split('\n');
+    assert.equal(lines.length, 2);
+    assert.deepEqual(JSON.parse(lines[0]).message, { event: 'signup', user: 3 });
+    assert.ok(lines[1].includes('plain-text-message'));
+    assert.ok(lines[1].includes('[info]'));
+  });
+
   it('child exposes the full level surface and normalizes input', () => {
     const inst = log.createLogger();
     const c = inst.child({ service: 'api' });
@@ -196,6 +226,39 @@ describe('console output', () => {
     });
     inst.close();
     assert.ok(out.includes('boom'));
+  });
+
+  it('routes error/warn to stderr and info to stdout', () => {
+    const inst = log.createLogger({ console: { colorize: false, enableTimestamp: false } });
+    const lines = { out: [], err: [] };
+    const origOut = process.stdout.write.bind(process.stdout);
+    const origErr = process.stderr.write.bind(process.stderr);
+    process.stdout.write = (c) => { lines.out.push(String(c)); return true; };
+    process.stderr.write = (c) => { lines.err.push(String(c)); return true; };
+    try {
+      inst.info('to-stdout');
+      inst.warn('to-stderr-warn');
+      inst.error('to-stderr-error');
+    } finally {
+      process.stdout.write = origOut;
+      process.stderr.write = origErr;
+    }
+    inst.close();
+    assert.ok(lines.out.some((l) => l.includes('to-stdout')));
+    assert.ok(lines.err.some((l) => l.includes('to-stderr-warn')));
+    assert.ok(lines.err.some((l) => l.includes('to-stderr-error')));
+    assert.ok(!lines.out.some((l) => l.includes('to-stderr-error')));
+  });
+
+  it('supports timestamp prefix, suffix and custom formats', () => {
+    const inst = log.createLogger({
+      console: { colorize: false, timestampPrefix: '<', timestampSuffix: '>', timestampFormat: 'YYYY' },
+    });
+    const out = captureOutput(() => {
+      inst.info('dated-message');
+    });
+    inst.close();
+    assert.match(out, new RegExp(`<${new Date().getFullYear()}> \\[info\\]: dated-message`));
   });
 
   it('error with extra meta keeps stack and fields', () => {

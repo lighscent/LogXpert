@@ -159,6 +159,52 @@ describe('mini logger core', () => {
     ]);
   });
 
+  it('a failing transport neither throws nor starves the others', () => {
+    const seen = [];
+    const reported = [];
+    const logger = new MiniLogger({ level: 'debug', onError: (e) => reported.push(e) });
+    logger.add({ write: () => { throw new Error('disk full'); } });
+    logger.add({ write: (e) => seen.push(e) });
+    assert.doesNotThrow(() => logger.log('info', 'hi'));
+    assert.equal(seen.length, 1);
+    assert.equal(seen[0].message, 'hi');
+    assert.equal(reported.length, 1);
+    assert.match(reported[0].message, /disk full/);
+  });
+
+  it('transport errors default to a raw stderr line', () => {
+    const lines = [];
+    const orig = process.stderr.write.bind(process.stderr);
+    process.stderr.write = (c) => { lines.push(String(c)); return true; };
+    try {
+      const logger = new MiniLogger({ level: 'debug' });
+      logger.add({ write: () => { throw new Error('boom'); } });
+      logger.log('info', 'x');
+    } finally {
+      process.stderr.write = orig;
+    }
+    assert.ok(lines.some((l) => l.includes('logxpert: transport error') && l.includes('boom')));
+  });
+
+  it('an onError that logs cannot loop', () => {
+    const errLines = [];
+    const orig = process.stderr.write.bind(process.stderr);
+    process.stderr.write = (c) => { errLines.push(String(c)); return true; };
+    let reports = 0;
+    try {
+      const logger = new MiniLogger({
+        level: 'debug',
+        onError: () => { reports += 1; logger.log('error', 'handler failed'); },
+      });
+      logger.add({ write: () => { throw new Error('always'); } });
+      assert.doesNotThrow(() => logger.log('info', 'x'));
+    } finally {
+      process.stderr.write = orig;
+    }
+    assert.equal(reports, 1);
+    assert.ok(errLines.some((l) => l.includes('always')));
+  });
+
   it('console transport sends error/warn to stderr', () => {
     const lines = { out: [], err: [] };
     const origOut = process.stdout.write.bind(process.stdout);

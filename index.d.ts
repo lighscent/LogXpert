@@ -50,6 +50,7 @@ declare namespace log {
     files?: FilesOptions;
     level?: LogLevel;
     sanitize?: boolean;
+    onError?: (err: unknown, transport: unknown, entry: unknown) => void;
   }
 
   export interface ChildLogger {
@@ -57,6 +58,9 @@ declare namespace log {
     warn(message: unknown, ...meta: unknown[]): void;
     info(message: unknown, ...meta: unknown[]): void;
     debug(message: unknown, ...meta: unknown[]): void;
+    http(message: unknown, ...meta: unknown[]): void;
+    verbose(message: unknown, ...meta: unknown[]): void;
+    silly(message: unknown, ...meta: unknown[]): void;
     log(level: LogLevel, message: unknown, ...meta: unknown[]): void;
   }
 

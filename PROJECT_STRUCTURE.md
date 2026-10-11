@@ -8,7 +8,7 @@ LogXpert/
 ├── index.d.mts                   # ESM types
 │
 ├── lib/                          # Homemade core (no runtime deps except dayjs)
-│   ├── mini.js                   # Levels, MiniLogger, console transport, colors
+│   ├── mini.js                   # Levels, MiniLogger, console transport, colors, transport error guard
 │   ├── rotate.js                 # Daily file rotation: maxSize/maxFiles/gzip
 │   ├── files.js                  # File options normalization (prefix, filePattern, runNumber…)
 │   ├── time.js                   # Timestamps (precompiled)

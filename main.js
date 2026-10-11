@@ -46,7 +46,7 @@ function createLoggerInstance(initial = {}) {
   const globalLevel = process.env.LOG_LEVEL || initial.level || 'debug';
   assertLevel(globalLevel);
 
-  const logger = new MiniLogger({ level: globalLevel });
+  const logger = new MiniLogger({ level: globalLevel, onError: initial.onError });
 
   let consoleTransport = buildConsoleTransport(normalizeConsoleOpts(initial.console));
   consoleTransport.level = normalizeConsoleOpts(initial.console).level;

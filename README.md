@@ -120,6 +120,8 @@ Legacy aliases: `appName` (= `prefix`), `filename`/`pattern` (= `filePattern`), 
 
 Security: messages are stripped of ANSI escapes and control characters (except `\n`, `\t`); file patterns escaping the log folder (`..`, absolute paths) are rejected.
 
+Reliability: a failing transport never throws and never loops — the error goes to `onError(err, transport, entry)` passed to `createLogger()`, defaulting to a raw stderr line.
+
 ## Download stats
 
 [![npm downloads](assets/npm-downloads.svg)](https://www.npmjs.com/package/logxpert)

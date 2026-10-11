@@ -2,7 +2,9 @@ const { describe, it, beforeEach, afterEach, after } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const dayjs = require('dayjs');
 
+const { resolveRunNumber } = require('../lib/files');
 const { log, testLogger, cleanupTmp, makeTmpDir, fileTransport, waitForLog } = require('./helpers');
 
 after(cleanupTmp);
@@ -46,8 +48,28 @@ describe('file logging', () => {
     const b = testLogger();
     b.settings({ files: { folder: dir, appName: 'myapp', runNumber: true } });
     assert.ok(fileTransport(b).filename.endsWith('-2.log'));
-    assert.equal(fs.readFileSync(path.join(dir, '.myapp.run'), 'utf8'), '2');
+    assert.equal(fs.readFileSync(path.join(dir, '.myapp.run'), 'utf8'), dayjs().format('YYYY_MM_DD') + '\n2');
     b.close();
+  });
+
+  it('runNumber resets to startAt on a new day', () => {
+    const dir = makeTmpDir();
+    assert.equal(resolveRunNumber(dir, 'bot', true, '2026_10_11'), '-1');
+    assert.equal(resolveRunNumber(dir, 'bot', true, '2026_10_11'), '-2');
+    assert.equal(resolveRunNumber(dir, 'bot', true, '2026_10_12'), '-1', 'new day resets');
+    assert.equal(resolveRunNumber(dir, 'bot', true, '2026_10_12'), '-2');
+    assert.equal(fs.readFileSync(path.join(dir, '.bot.run'), 'utf8'), '2026_10_12\n2');
+  });
+
+  it('runNumber keeps global counting without a date and continues legacy counters', () => {
+    const dir = makeTmpDir();
+    assert.equal(resolveRunNumber(dir, 'bot', true), '-1');
+    assert.equal(resolveRunNumber(dir, 'bot', true), '-2', 'no date keeps legacy global behavior');
+    fs.writeFileSync(path.join(dir, '.legacy.run'), '5');
+    assert.equal(resolveRunNumber(dir, 'legacy', true, '2026_10_11'), '-6', 'legacy plain-integer counter continues');
+    assert.equal(resolveRunNumber(dir, 'legacy', true, '2026_10_11'), '-7');
+    fs.writeFileSync(path.join(dir, '.corrupt.run'), 'garbage');
+    assert.equal(resolveRunNumber(dir, 'corrupt', true, '2026_10_11'), '-1', 'corrupt counter resets');
   });
 
   it('runNumber format is customizable', () => {

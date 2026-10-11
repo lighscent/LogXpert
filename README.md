@@ -102,7 +102,7 @@ log.settings({
     prefix: undefined, // defaults to your package.json name
     // filePattern: 'app-%datePattern%.log', // full control (omit prefix if used)
     datePattern: 'YYYY_MM_DD',
-    runNumber: false, // or true, or { separator: '-', padding: 0, startAt: 1 }
+    runNumber: false, // or true, or { separator: '-', padding: 0, startAt: 1 } — per-day, resets to startAt each new day
     maxFile: '14d',
     maxSize: '20m',
     zippedArchive: false,

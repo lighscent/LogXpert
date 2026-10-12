@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.2.1
+- Fix `zippedArchive`: one archive per day — date change merges all same-day logs (in order) into a single `<prefix>-<date>.log.gz` instead of one `.gz` per `runNumber`/`maxSize` split; `maxSize` splits stay plain `.log` until day rollover
+
 ## 2.2.0
 - Fix `zippedArchive`: date change now archives all same-date siblings (`runNumber` runs, `maxSize` splits), not just the current file; `maxSize` rotation gzips the rotated-out file; live files archived on stream close; originals removed
 - `runNumber` is now per-day: same day increments, a new day resets to `startAt` (legacy counters continue once, then migrate)

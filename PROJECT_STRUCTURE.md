@@ -9,7 +9,7 @@ LogXpert/
 │
 ├── lib/                          # Homemade core (no runtime deps except dayjs)
 │   ├── mini.js                   # Levels, MiniLogger, console transport, colors, transport error guard
-│   ├── rotate.js                 # Daily file rotation: maxSize/maxFiles/gzip
+│   ├── rotate.js                 # Daily file rotation: maxSize/maxFiles, single daily .log.gz merge
 │   ├── files.js                  # File options normalization (prefix, filePattern, runNumber…)
 │   ├── time.js                   # Timestamps (precompiled)
 │   ├── format.js                 # Log line formatting (text historical, JSON for objects — auto)

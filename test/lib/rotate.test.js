@@ -12,6 +12,8 @@ const { createLogEvent } = require('../../lib/event');
 
 after(cleanupTmp);
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 function makeFileTransport(dir, overrides = {}) {
   return new FileTransport({
     folder: dir,
@@ -63,22 +65,23 @@ describe('rotate', () => {
     noTail.close();
   });
 
-  it('archiveFile() ignores non-archivable inputs', () => {
+  it('archiveDay() ignores non-archivable inputs', () => {
     const dir = makeTmpDir();
     const t = makeFileTransport(dir, { zippedArchive: true });
     assert.doesNotThrow(() => {
-      t.archiveFile(null);
-      t.archiveFile(42);
-      t.archiveFile(path.join(dir, 'already.gz'));
-      t.archiveFile(path.join(dir, 'notes.txt'));
-      t.archiveFile(path.join(dir, 'missing-2026_10_01.log'));
+      t.archiveDay(null);
+      t.archiveDay(42);
+      t.archiveDay(path.join(dir, 'already.log.gz'));
+      t.archiveDay(path.join(dir, 'notes.txt'));
+      t.archiveDay(path.join(dir, 'missing-2026_10_01.log'));
     });
+    assert.deepEqual(fs.readdirSync(dir).filter((f) => f.endsWith('.gz')), []);
     const kept = path.join(dir, 'keep-2026_10_01.log');
     fs.writeFileSync(kept, 'data');
     const plain = makeFileTransport(dir);
-    plain.archiveFile(kept);
+    plain.archiveDay(kept);
     assert.ok(fs.existsSync(kept), 'no archive without zippedArchive');
-    assert.ok(!fs.existsSync(kept + '.gz'));
+    assert.ok(!fs.existsSync(path.join(dir, 'keep-2026_10_01.log.gz')));
     t.close();
     plain.close();
   });
@@ -133,15 +136,16 @@ describe('rotate', () => {
     t.close();
   });
 
-  it('gzips the previous file on date change when enabled', () => {
+  it('merges the previous file into a single daily archive on date change', () => {
     const dir = makeTmpDir();
     const t = makeFileTransport(dir, { zippedArchive: true });
     const prev = path.join(dir, 'app-2026_10_01.log');
     fs.writeFileSync(prev, 'old-content');
-    t.onDateChanged(prev);
+    t.archiveDay(prev);
+    const archive = path.join(dir, 'app-2026_10_01.log.gz');
     assert.ok(!fs.existsSync(prev), 'original should be removed');
-    assert.ok(fs.existsSync(prev + '.gz'), 'gzip should exist');
-    assert.equal(zlib.gunzipSync(fs.readFileSync(prev + '.gz')).toString(), 'old-content');
+    assert.ok(fs.existsSync(archive), 'single daily archive should exist');
+    assert.equal(zlib.gunzipSync(fs.readFileSync(archive)).toString(), 'old-content');
     t.close();
   });
 
@@ -150,17 +154,17 @@ describe('rotate', () => {
     const t = makeFileTransport(dir);
     const prev = path.join(dir, 'app-2026_10_01.log');
     fs.writeFileSync(prev, 'old-content');
-    t.onDateChanged(prev);
+    t.archiveDay(prev);
     assert.ok(fs.existsSync(prev), 'original should be kept');
-    assert.ok(!fs.existsSync(prev + '.gz'));
+    assert.ok(!fs.existsSync(path.join(dir, 'app-2026_10_01.log.gz')));
     t.close();
   });
 
-  it('onDateChanged() survives a vanished folder', () => {
+  it('archiveDay() survives a vanished folder', () => {
     const dir = makeTmpDir();
     const t = makeFileTransport(dir, { zippedArchive: true });
     fs.rmSync(dir, { recursive: true, force: true });
-    assert.doesNotThrow(() => t.onDateChanged(path.join(dir, 'app-2026_10_01.log')));
+    assert.doesNotThrow(() => t.archiveDay(path.join(dir, 'app-2026_10_01.log')));
     t.close();
   });
 
@@ -210,7 +214,7 @@ describe('rotate', () => {
     assert.ok(files.some((f) => f.includes('2000_01_01')));
   });
 
-  it('date change archives all same-date siblings', () => {
+  it('date change merges all same-date siblings into one archive', () => {
     const dir = makeTmpDir();
     const t = makeFileTransport(dir, { zippedArchive: true });
     const base = path.join(dir, 'app-2026_10_01.log');
@@ -223,14 +227,21 @@ describe('rotate', () => {
     fs.writeFileSync(s2, 'sibling-two');
     fs.writeFileSync(otherDate, 'other-date');
     fs.writeFileSync(runCounter, '3');
-    t.onDateChanged(base);
+    const now = Date.now();
+    fs.utimesSync(base, new Date(now - 3000), new Date(now - 3000));
+    fs.utimesSync(s1, new Date(now - 2000), new Date(now - 2000));
+    fs.utimesSync(s2, new Date(now - 1000), new Date(now - 1000));
+    t.archiveDay(base);
+    const archive = path.join(dir, 'app-2026_10_01.log.gz');
     for (const f of [base, s1, s2]) {
       assert.ok(!fs.existsSync(f), `original should be removed: ${f}`);
-      assert.ok(fs.existsSync(f + '.gz'), `gzip should exist: ${f}.gz`);
     }
-    assert.equal(zlib.gunzipSync(fs.readFileSync(base + '.gz')).toString(), 'base-content');
-    assert.equal(zlib.gunzipSync(fs.readFileSync(s1 + '.gz')).toString(), 'sibling-one');
-    assert.equal(zlib.gunzipSync(fs.readFileSync(s2 + '.gz')).toString(), 'sibling-two');
+    assert.deepEqual(
+      fs.readdirSync(dir).filter((f) => f.endsWith('.gz')),
+      ['app-2026_10_01.log.gz'],
+      'exactly one archive expected',
+    );
+    assert.equal(zlib.gunzipSync(fs.readFileSync(archive)).toString(), 'base-contentsibling-onesibling-two');
     assert.ok(fs.existsSync(otherDate), 'other-date file must be untouched');
     assert.ok(!fs.existsSync(otherDate + '.gz'), 'other-date file must not be gzipped');
     assert.equal(fs.readFileSync(runCounter, 'utf8'), '3', '.run counter must be untouched');
@@ -238,7 +249,7 @@ describe('rotate', () => {
     t.close();
   });
 
-  it('date change archives siblings for runNumber-baked filename', () => {
+  it('date change merges siblings for runNumber-baked filename', () => {
     const dir = makeTmpDir();
     const t = makeFileTransport(dir, { filename: 'bot-%DATE%-1.log', zippedArchive: true });
     const r1 = path.join(dir, 'bot-2026_10_01-1.log');
@@ -247,15 +258,25 @@ describe('rotate', () => {
     fs.writeFileSync(r1, 'run-one');
     fs.writeFileSync(r2, 'run-two');
     fs.writeFileSync(plain, 'plain-base');
-    t.onDateChanged(r1);
+    const now = Date.now();
+    fs.utimesSync(r1, new Date(now - 3000), new Date(now - 3000));
+    fs.utimesSync(r2, new Date(now - 2000), new Date(now - 2000));
+    fs.utimesSync(plain, new Date(now - 1000), new Date(now - 1000));
+    t.archiveDay(r1);
+    const archive = path.join(dir, 'bot-2026_10_01.log.gz');
     for (const f of [r1, r2, plain]) {
       assert.ok(!fs.existsSync(f), `original should be removed: ${f}`);
-      assert.ok(fs.existsSync(f + '.gz'), `gzip should exist: ${f}.gz`);
     }
+    assert.deepEqual(
+      fs.readdirSync(dir).filter((f) => f.endsWith('.gz')),
+      ['bot-2026_10_01.log.gz'],
+      'exactly one archive expected',
+    );
+    assert.equal(zlib.gunzipSync(fs.readFileSync(archive)).toString(), 'run-onerun-twoplain-base');
     t.close();
   });
 
-  it('maxSize rotation gzips the rotated-out file', async () => {
+  it('maxSize rotation keeps split files plain until date change merges them', async () => {
     const dir = makeTmpDir();
     const t = makeFileTransport(dir, { maxSize: '10', zippedArchive: true });
     t.open('2026_10_01');
@@ -263,48 +284,67 @@ describe('rotate', () => {
     fs.writeFileSync(oldFile, 'old-content-payload');
     t.streamSize = fs.statSync(oldFile).size;
     t.rotateIfNeeded('2026_10_01', 100);
-    const start = Date.now();
-    while (!fs.existsSync(oldFile + '.gz') && Date.now() - start < 3000) {
-      await new Promise((r) => setTimeout(r, 50));
-    }
-    assert.ok(!fs.existsSync(oldFile), 'rotated-out .log should be removed');
-    assert.ok(fs.existsSync(oldFile + '.gz'), 'rotated-out file should be gzipped');
-    assert.equal(zlib.gunzipSync(fs.readFileSync(oldFile + '.gz')).toString(), 'old-content-payload');
-    assert.ok(t.currentFile !== oldFile, 'stream should point at the new file');
+    assert.ok(fs.existsSync(oldFile), 'rotated-out .log stays plain during the day');
+    assert.ok(!fs.existsSync(oldFile + '.gz'), 'no per-file gzip anymore');
     assert.ok(String(t.currentFile).endsWith('-1.log'), `new file should be suffixed, got ${t.currentFile}`);
+    t.rotateIfNeeded('2000_01_01', 1);
+    const archive = path.join(dir, 'app-2026_10_01.log.gz');
+    const start = Date.now();
+    while (!fs.existsSync(archive) && Date.now() - start < 3000) {
+      await sleep(50);
+    }
+    await sleep(300);
+    assert.deepEqual(
+      fs.readdirSync(dir).filter((f) => f.endsWith('.gz')),
+      ['app-2026_10_01.log.gz'],
+      'exactly one archive expected',
+    );
+    assert.equal(zlib.gunzipSync(fs.readFileSync(archive)).toString(), 'old-content-payload');
+    assert.ok(!fs.existsSync(oldFile), 'rotated-out .log should be removed');
+    assert.ok(String(t.currentFile).includes('2000_01_01'), `stream should point at the new date file, got ${t.currentFile}`);
     t.close();
   });
 
-  it('maxSize rotation archives back-to-back writes (async-open race)', async () => {
+  it('maxSize splits merge into one archive on date change (async-open race)', async () => {
     const dir = makeTmpDir();
     const t = makeFileTransport(dir, { filename: 'race-%DATE%.log', maxSize: '10', zippedArchive: true });
     t.write(createLogEvent('info', 'x'.repeat(50)));
     t.write(createLogEvent('info', 'y'.repeat(50)));
+    await sleep(300);
+    t.rotateIfNeeded('2000_01_01', 1);
     const start = Date.now();
-    let gz = null;
+    let gz = [];
     while (Date.now() - start < 3000) {
-      const hit = fs.readdirSync(dir).filter((f) => f.endsWith('.log.gz'));
-      if (hit.length > 0) { gz = hit[0]; break; }
-      await new Promise((r) => setTimeout(r, 50));
+      gz = fs.readdirSync(dir).filter((f) => f.endsWith('.log.gz'));
+      if (gz.length > 0) break;
+      await sleep(50);
     }
+    await sleep(300);
     t.close();
-    assert.ok(gz, `expected a .gz archive, got ${fs.readdirSync(dir)}`);
-    assert.equal(zlib.gunzipSync(fs.readFileSync(path.join(dir, gz))).toString(), 'x'.repeat(50) + '\n');
+    const final = fs.readdirSync(dir).filter((f) => f.endsWith('.log.gz'));
+    assert.equal(final.length, 1, `expected a single archive, got ${fs.readdirSync(dir)}`);
+    assert.equal(zlib.gunzipSync(fs.readFileSync(path.join(dir, final[0]))).toString(), 'x'.repeat(50) + '\n' + 'y'.repeat(50) + '\n');
   });
 
   it('date change archives the live file after stream close', async () => {
     const dir = makeTmpDir();
     const t = makeFileTransport(dir, { filename: 'live-%DATE%.log', zippedArchive: true });
     t.write(createLogEvent('info', 'day-one-content'));
+    await sleep(300);
     const oldFile = t.currentFile;
     t.rotateIfNeeded('2000_01_01', 1);
     const start = Date.now();
-    while (!fs.existsSync(oldFile + '.gz') && Date.now() - start < 3000) {
-      await new Promise((r) => setTimeout(r, 50));
+    let gz = [];
+    while (Date.now() - start < 3000) {
+      gz = fs.readdirSync(dir).filter((f) => f.endsWith('.log.gz'));
+      if (gz.length > 0) break;
+      await sleep(50);
     }
+    await sleep(300);
     assert.ok(!fs.existsSync(oldFile), 'previous live .log should be removed');
-    assert.ok(fs.existsSync(oldFile + '.gz'), 'previous live file should be gzipped');
-    assert.equal(zlib.gunzipSync(fs.readFileSync(oldFile + '.gz')).toString(), 'day-one-content\n');
+    const final = fs.readdirSync(dir).filter((f) => f.endsWith('.log.gz'));
+    assert.equal(final.length, 1, `expected a single archive, got ${fs.readdirSync(dir)}`);
+    assert.equal(zlib.gunzipSync(fs.readFileSync(path.join(dir, final[0]))).toString(), 'day-one-content\n');
     assert.ok(String(t.currentFile).includes('2000_01_01'), `stream should point at the new date file, got ${t.currentFile}`);
     t.close();
   });

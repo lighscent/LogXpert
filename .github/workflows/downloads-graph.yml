@@ -2,7 +2,6 @@ name: Downloads graph
 on:
   schedule:
     - cron: '0 4 * * *'
-  workflow_dispatch:
 
 permissions:
   contents: write

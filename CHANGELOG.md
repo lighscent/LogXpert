@@ -2,6 +2,12 @@
 
 ## 2.2.1
 - Fix `zippedArchive`: one archive per day — date change merges all same-day logs (in order) into a single `<prefix>-<date>.log.gz` instead of one `.gz` per `runNumber`/`maxSize` split; `maxSize` splits stay plain `.log` until day rollover
+- Automatic JSON Lines rendering: object messages are logged as JSON, strings keep the historic text format (console + file, per entry, no config needed)
+- New `createLogger({ onError })`: transport errors are isolated — no-throw, no logging loops; defaults to a one-line `stderr` report
+- `log.child()` now exposes all 7 levels (`http`/`verbose`/`silly` were missing) and applies `sanitize`/`Error`/lazy normalization like the parent
+- Internals: normalized `LogEvent` model (`lib/event.js`), context enrichment extracted (`lib/context.js`), input normalization moved out of the public facade
+- Tests: per-module layout (`test/lib/`, one file per module), full line coverage (131 tests)
+- Docs: npm badges, rolling 7-day downloads graph with top-5 versions panel + JSON stats, regenerated daily by workflow
 
 ## 2.2.0
 - Fix `zippedArchive`: date change now archives all same-date siblings (`runNumber` runs, `maxSize` splits), not just the current file; `maxSize` rotation gzips the rotated-out file; live files archived on stream close; originals removed

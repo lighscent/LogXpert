@@ -129,7 +129,7 @@ Reliability: a failing transport never throws and never loops — the error goes
 ## Benchmarks
 
 <!-- bench-report:start -->
-Latest: _published automatically with each release_ — [all version reports](benchmarks/reports/)
+Latest: [v2.2.2-2](benchmarks/reports/v2.2.2-2/REPORT.md) — [all version reports](benchmarks/reports/)
 <!-- bench-report:end -->
 
 ## License

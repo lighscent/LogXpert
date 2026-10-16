@@ -46,10 +46,19 @@ LogXpert/
 ├── demo/
 │   └── reporter.demo.test.js      # Reporter demo (`npm run test:demo`)
 │
+├── benchmarks/                   # Benchmark infra, logxpert = reference ★
+│   ├── adapters/                 # One adapter per logger (logxpert, pino, winston, bunyan, console)
+│   ├── scenarios/                # Workloads (text, structured, context, json, error, disabled, …)
+│   ├── lib/                      # Engine (isolated reps), stats, export JSON/CSV, reporting
+│   ├── scripts/                  # run.js (suites), report.js (REPORT.md + SVG per result)
+│   ├── results/                  # Raw runs, gitignored (local only)
+│   └── reports/                  # Per-release published reports (benchmark-report.yml)
+│
 ├── .github/workflows/
 │   ├── ci.yml                    # Tests + types + attw (Node 22/24/26, paths-filtered)
 │   ├── release.yml               # Auto-release when package.json version changes
-│   └── downloads-graph.yml       # Regenerates chart/JSON (daily 4am UTC cron + manual)
+│   ├── downloads-graph.yml       # Regenerates chart/JSON (daily 4am UTC cron only)
+│   └── benchmark-report.yml      # Bench + report committed to reports/<tag> on release
 │
 ├── x/                            # Versioned test folder (do not delete)
 ├── src/ / dist/                  # Empty folders (reserved)

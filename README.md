@@ -126,6 +126,12 @@ Reliability: a failing transport never throws and never loops — the error goes
 
 [![npm downloads](assets/npm-downloads.svg)](https://www.npmjs.com/package/logxpert)
 
+## Benchmarks
+
+<!-- bench-report:start -->
+Latest: _published automatically with each release_ — [all version reports](benchmarks/reports/)
+<!-- bench-report:end -->
+
 ## License
 
 Apache-2.0. See [LICENSE](LICENSE).

@@ -3,5 +3,7 @@ logs
 *.log
 coverage
 .nyc_output
+benchmarks/results/*
+!benchmarks/results/.gitkeep
 .DS_Store
 ROADMAP.md

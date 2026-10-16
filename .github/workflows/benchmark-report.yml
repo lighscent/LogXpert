@@ -1,0 +1,57 @@
+name: benchmark-report
+
+# On every published GitHub release: run the standard benchmark suite,
+# generate the report (REPORT.md + chart.svg + ranking.svg) and commit it
+# under benchmarks/reports/<tag> so it stays browsable on the repo.
+#
+# Comparability rule: repo numbers ALWAYS come from this workflow, on a
+# pinned runner (ubuntu-24.04) + pinned Node major (22) + the fixed standard
+# suite (npm run bench). No workflow_dispatch, no inputs — local runs can
+# never be published here, so every version report shares the same baseline.
+# Each report still records its exact env; only compare same-runner numbers.
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  report:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run bench
+
+      - name: Publish report for this tag
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          STAMP=$(ls -d benchmarks/results/2* | sort | tail -n 1)
+          DEST="benchmarks/reports/$TAG"
+          mkdir -p "$DEST"
+          cp "$STAMP"/* "$DEST/"
+          node benchmarks/scripts/report.js --dir "$DEST"
+
+      - name: Link latest report from README
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          node -e 'const fs=require("fs");const tag=process.env.TAG;const s=fs.readFileSync("README.md","utf8");const eol=s.includes("\r\n")?"\r\n":"\n";const i=s.indexOf("<!-- bench-report:start -->"),j=s.indexOf("<!-- bench-report:end -->");if(i<0||j<0||j<i){console.error("bench-report markers missing in README");process.exit(1)}const headEnd=s.indexOf("\n",i)+1;let tailStart=j;while(tailStart>0&&s[tailStart-1]!=="\n")tailStart-=1;const line=`Latest: [${tag}](benchmarks/reports/${tag}/REPORT.md) — [all version reports](benchmarks/reports/)`;fs.writeFileSync("README.md",s.slice(0,headEnd)+line+eol+s.slice(tailStart));'
+
+      - name: Commit report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add benchmarks/reports README.md
+          git diff --cached --quiet || git commit -m "docs: benchmark report for ${{ github.event.release.tag_name }}"
+          git push

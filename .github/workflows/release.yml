@@ -30,6 +30,13 @@ jobs:
           TAG="v$VERSION"
           echo "Version: $VERSION / Tag: $TAG"
 
+          case "$VERSION" in
+            *-*)
+              echo "Version pre-release ($VERSION), pas de release."
+              exit 0
+              ;;
+          esac
+
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "Release $TAG existe deja, skip."
             exit 0

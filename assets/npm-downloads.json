@@ -1,13 +1,9 @@
 {
   "package": "logxpert",
-  "updated": "2026-10-17",
+  "updated": "2026-10-18",
   "window": "last 14 complete days (today excluded, npm has no current-day stats)",
-  "totalDownloads": 1166,
+  "totalDownloads": 1182,
   "daily": [
-    {
-      "day": "2026-10-03",
-      "downloads": 0
-    },
     {
       "day": "2026-10-04",
       "downloads": 0
@@ -58,82 +54,66 @@
     },
     {
       "day": "2026-10-16",
+      "downloads": 16
+    },
+    {
+      "day": "2026-10-17",
       "downloads": 0
     }
   ],
   "versionCoverage": "last 7 days (npm versions API is last-week only)",
   "topVersions": [
     {
-      "version": "2.1.0",
-      "downloads": 194
-    },
-    {
-      "version": "2.1.2",
-      "downloads": 180
-    },
-    {
-      "version": "2.0.0",
-      "downloads": 175
-    },
-    {
       "version": "2.2.0",
-      "downloads": 157
-    },
-    {
-      "version": "2.0.3",
-      "downloads": 155
+      "downloads": 160
     },
     {
       "version": "2.2.1",
-      "downloads": 138
+      "downloads": 141
     },
     {
-      "version": "2.1.1",
-      "downloads": 97
+      "version": "2.1.2",
+      "downloads": 46
     },
     {
-      "version": "1.0.5",
-      "downloads": 28
+      "version": "2.1.0",
+      "downloads": 20
     },
     {
-      "version": "1.0.4-0",
-      "downloads": 6
+      "version": "2.0.0",
+      "downloads": 13
     },
     {
-      "version": "1.0.2",
-      "downloads": 5
-    },
-    {
-      "version": "1.0.3",
-      "downloads": 5
+      "version": "2.0.3",
+      "downloads": 13
     },
     {
       "version": "0.3.0",
-      "downloads": 4
-    },
-    {
-      "version": "0.3.1",
-      "downloads": 4
-    },
-    {
-      "version": "0.3.2",
-      "downloads": 4
-    },
-    {
-      "version": "1.0.0",
-      "downloads": 4
-    },
-    {
-      "version": "1.0.1",
-      "downloads": 4
+      "downloads": 2
     },
     {
       "version": "0.1.0",
-      "downloads": 3
+      "downloads": 1
     },
     {
-      "version": "0.2.0",
-      "downloads": 3
+      "version": "0.3.1",
+      "downloads": 1
+    },
+    {
+      "version": "0.3.2",
+      "downloads": 1
+    },
+    {
+      "version": "1.0.1",
+      "downloads": 1
+    },
+    {
+      "version": "1.0.2",
+      "downloads": 1
+    },
+    {
+      "version": "1.0.4-0",
+      "downloads": 1
     }
   ],
   "snapshots": [
@@ -268,6 +248,24 @@
         "2.1.1": 97,
         "2.2.1": 138,
         "2.1.0": 194
+      }
+    },
+    {
+      "day": "2026-10-18",
+      "versions": {
+        "2.0.0": 13,
+        "2.0.3": 13,
+        "2.2.1": 141,
+        "0.3.2": 1,
+        "2.2.0": 160,
+        "2.1.0": 20,
+        "0.3.1": 1,
+        "1.0.1": 1,
+        "0.1.0": 1,
+        "1.0.4-0": 1,
+        "0.3.0": 2,
+        "1.0.2": 1,
+        "2.1.2": 46
       }
     }
   ]

@@ -1,13 +1,9 @@
 {
   "package": "logxpert",
-  "updated": "2026-10-18",
+  "updated": "2026-10-19",
   "window": "last 14 complete days (today excluded, npm has no current-day stats)",
-  "totalDownloads": 1182,
+  "totalDownloads": 1185,
   "daily": [
-    {
-      "day": "2026-10-04",
-      "downloads": 0
-    },
     {
       "day": "2026-10-05",
       "downloads": 0
@@ -58,6 +54,10 @@
     },
     {
       "day": "2026-10-17",
+      "downloads": 3
+    },
+    {
+      "day": "2026-10-18",
       "downloads": 0
     }
   ],
@@ -69,31 +69,27 @@
     },
     {
       "version": "2.2.1",
-      "downloads": 141
+      "downloads": 143
     },
     {
       "version": "2.1.2",
-      "downloads": 46
+      "downloads": 31
     },
     {
       "version": "2.1.0",
-      "downloads": 20
-    },
-    {
-      "version": "2.0.0",
-      "downloads": 13
+      "downloads": 9
     },
     {
       "version": "2.0.3",
-      "downloads": 13
+      "downloads": 6
+    },
+    {
+      "version": "2.0.0",
+      "downloads": 3
     },
     {
       "version": "0.3.0",
       "downloads": 2
-    },
-    {
-      "version": "0.1.0",
-      "downloads": 1
     },
     {
       "version": "0.3.1",
@@ -105,14 +101,6 @@
     },
     {
       "version": "1.0.1",
-      "downloads": 1
-    },
-    {
-      "version": "1.0.2",
-      "downloads": 1
-    },
-    {
-      "version": "1.0.4-0",
       "downloads": 1
     }
   ],
@@ -266,6 +254,21 @@
         "0.3.0": 2,
         "1.0.2": 1,
         "2.1.2": 46
+      }
+    },
+    {
+      "day": "2026-10-19",
+      "versions": {
+        "2.2.0": 160,
+        "0.3.2": 1,
+        "2.0.3": 6,
+        "0.3.1": 1,
+        "2.2.1": 143,
+        "1.0.1": 1,
+        "2.1.0": 9,
+        "0.3.0": 2,
+        "2.0.0": 3,
+        "2.1.2": 31
       }
     }
   ]
